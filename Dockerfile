@@ -1,1 +1,1 @@
-FROM n8nio/n8n:ai-beta
+FROM n8nio/n8n:latest
