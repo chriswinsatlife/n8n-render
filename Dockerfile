@@ -33,6 +33,3 @@ WORKDIR /home/node
 ENV NODE_ICU_DATA /usr/local/lib/node_modules/full-icu
 
 EXPOSE 5678/tcp
-
-# Default command to run the n8n service
-CMD ["n8n", "start"]
