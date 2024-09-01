@@ -17,14 +17,11 @@ RUN apk add --update git openssh graphicsmagick tini tzdata ca-certificates libc
 # Update npm and install full-uci
 RUN npm install -g npm@9.9.2 full-icu@1.5.0
 
-# Activate corepack and install pnpm (optional, if needed)
-RUN corepack enable && corepack prepare --activate
-
 # Cleanup unnecessary files
 RUN	rm -rf /lib/apk/db /var/cache/apk/ /tmp/* /root/.npm /root/.cache/node /opt/yarn*
 
 # 2. Start with a new clean image and copy over the added files into a single layer
-FROM n8nio/n8n:latest
+FROM n8nio/n8n:next
 
 # Copy the built files from the builder stage
 COPY --from=builder / /
