@@ -1,39 +1,44 @@
-services:
-  - type: web
-    name: n8n
-    env: docker
-    region: oregon # optional (defaults to oregon)
-    plan: standard # optional (defaults to starter)
-    branch: main # optional (defaults to master)
-    # dockerCommand: ./webdis.sh # optional (defaults to Dockerfile command)
-    numInstances: 1
-    healthCheckPath: /
-    envVars:
-      - key: PGHOST
-        fromDatabase:
-          name: n8nDB
-          property: host
-      - key: PGDATABASE
-        fromDatabase:
-          name: n8nDB
-          property: database
-      - key: PGPORT
-        fromDatabase:
-          name: n8nDB
-          property: port
-      - key: PGUSER
-        fromDatabase:
-          name: n8nDB
-          property: user
-      - key: PGPASSWORD
-        fromDatabase:
-          name: n8nDB
-          property: password
-    disk:
-      name: n8nDisk
-      mountPath: /home/node/.n8n
-      sizeGB: 10
+version: '3.8'
 
-databases:
-  - name: n8nDB
-    plan: starter
+volumes:
+  db_storage:
+  n8n_storage:
+
+services:
+  postgres:
+    image: postgres:16
+    restart: always
+    environment:
+      - POSTGRES_USER=${PGUSER}           # Retrieved from your environment configuration
+      - POSTGRES_PASSWORD=${PGPASSWORD}   # Retrieved from your environment configuration
+      - POSTGRES_DB=${PGDATABASE}         # Retrieved from your environment configuration
+      - POSTGRES_NON_ROOT_USER=${PGUSER}  # Retrieved from your environment configuration
+      - POSTGRES_NON_ROOT_PASSWORD=${PGPASSWORD}  # Retrieved from your environment configuration
+    volumes:
+      - db_storage:/var/lib/postgresql/data
+      - ./init-data.sh:/docker-entrypoint-initdb.d/init-data.sh
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -h localhost -U ${PGUSER} -d ${PGDATABASE}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n
+    restart: always
+    environment:
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=${PGDATABASE}
+      - DB_POSTGRESDB_USER=${PGUSER}
+      - DB_POSTGRESDB_PASSWORD=${PGPASSWORD}
+    ports:
+      - 5678:5678
+    links:
+      - postgres
+    volumes:
+      - n8n_storage:/home/node/.n8n
+    depends_on:
+      postgres:
+        condition: service_healthy
