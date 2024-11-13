@@ -6,5 +6,8 @@ USER root
 # Install ffmpeg using apk (Alpine package manager)
 RUN apk add --no-cache ffmpeg
 
+# Install imagemagick using apk (Alpine package manager)
+RUN apk add --no-cache imagemagick
+
 # Switch back to the default user 'node'
 USER node
