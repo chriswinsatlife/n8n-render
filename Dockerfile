@@ -9,5 +9,8 @@ RUN apk add --no-cache ffmpeg
 # Install imagemagick using apk (Alpine package manager)
 RUN apk add --no-cache imagemagick
 
+# Install pdftoppm using apk (Alpine package manager)
+RUN apk add --no-cache pdftoppm
+
 # Switch back to the default user 'node'
 USER node
