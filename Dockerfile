@@ -10,9 +10,8 @@ RUN apk add --no-cache \
     poppler-utils \
     ghostscript \
     graphicsmagick \
-    python3 \
-    py3-pip && \
+    yt-dlp || \
     pip install --no-cache-dir yt-dlp
 
-# Switch back to the default user 'node'
+# Switch back to the default user
 USER node
