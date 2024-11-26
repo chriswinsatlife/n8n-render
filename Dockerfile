@@ -5,6 +5,13 @@ USER root
 
 # Install necessary packages using apk (Alpine package manager)
 RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    su-exec
     ffmpeg \
     imagemagick \
     poppler-utils \
@@ -13,5 +20,12 @@ RUN apk add --no-cache \
     yt-dlp || \
     pip install --no-cache-dir yt-dlp
 
+RUN npm install -g puppeteer n8n && \
+  npm cache clean --force
+
+EXPOSE 5678
+
 # Switch back to the default user
 USER node
+
+CMD ["n8n"]
