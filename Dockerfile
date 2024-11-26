@@ -11,7 +11,7 @@ RUN apk add --no-cache \
     harfbuzz \
     ca-certificates \
     ttf-freefont \
-    su-exec
+    su-exec \
     ffmpeg \
     imagemagick \
     poppler-utils \
