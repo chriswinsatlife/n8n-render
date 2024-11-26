@@ -27,5 +27,3 @@ EXPOSE 5678
 
 # Switch back to the default user
 USER node
-
-CMD ["n8n"]
