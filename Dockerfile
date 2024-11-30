@@ -5,6 +5,7 @@ USER root
 
 # Install necessary packages using apk (Alpine package manager)
 RUN apk add --no-cache \
+    pandoc \
     chromium \
     nss \
     freetype \
