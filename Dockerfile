@@ -20,6 +20,7 @@ RUN apk add --no-cache \
     graphicsmagick \
     yt-dlp || \
     pip install --no-cache-dir yt-dlp
+    pip install --no-cache-dir mobi
 
 RUN npm install -g puppeteer n8n && \
   npm cache clean --force
