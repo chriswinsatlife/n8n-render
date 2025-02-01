@@ -1,4 +1,3 @@
-ARG CACHEBUST=1
 FROM n8nio/n8n:next
 
 # Switch to root to install packages
@@ -19,11 +18,11 @@ RUN apk add --no-cache \
     poppler-utils \
     ghostscript \
     graphicsmagick \
-    yt-dlp || \
-    pip install --no-cache-dir yt-dlp \
+    yt-dlp && \
+    pip install --no-cache-dir yt-dlp && \
     pip install --no-cache-dir mobi
 
-RUN npm install -g puppeteer n8n && \
+RUN npm install -g puppeteer && \
   npm cache clean --force
 
 EXPOSE 5678
