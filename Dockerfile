@@ -18,8 +18,8 @@ RUN apk add --no-cache \
     poppler-utils \
     ghostscript \
     graphicsmagick \
-    yt-dlp && \
-    pip install --no-cache-dir yt-dlp && \
+    yt-dlp || \
+    pip install --no-cache-dir yt-dlp \
     pip install --no-cache-dir mobi
 
 RUN npm install -g puppeteer n8n && \
