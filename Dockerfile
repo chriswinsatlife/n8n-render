@@ -1,3 +1,4 @@
+ARG CACHEBUST=1
 FROM n8nio/n8n:next
 
 # Switch to root to install packages
