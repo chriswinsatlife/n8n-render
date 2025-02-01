@@ -1,4 +1,4 @@
-FROM n8nio/n8n:1.77.0
+FROM n8nio/n8n:next
 
 # Switch to root to install packages
 USER root
