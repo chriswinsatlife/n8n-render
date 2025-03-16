@@ -29,3 +29,6 @@ EXPOSE 5678
 
 # Switch back to the default user
 USER node
+RUN mkdir ~/.n8n/nodes
+WORKDIR ~/.n8n/nodes
+RUN npm i n8n-nodes-mcp
