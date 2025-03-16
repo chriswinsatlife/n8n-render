@@ -27,4 +27,4 @@ RUN npm install -g puppeteer && \
 
 EXPOSE 5678
 # Switch back to the default user
-USER root
+USER node
