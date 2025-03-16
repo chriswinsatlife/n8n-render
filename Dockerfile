@@ -25,15 +25,6 @@ RUN apk add --no-cache \
 RUN npm install -g puppeteer && \
   npm cache clean --force
 
-# Change ownership of npm directories
-RUN mkdir -p /home/node/.npm-global && \
-    chown -R node:node /home/node/.npm-global && \
-    chown -R node:node /usr/local/lib/node_modules || true
-
-# Configure npm to use this directory
-ENV NPM_CONFIG_PREFIX=/home/node/.npm-global
-ENV PATH=$PATH:/home/node/.npm-global/bin
-
 EXPOSE 5678
 # Switch back to the default user
-USER node
+USER root
