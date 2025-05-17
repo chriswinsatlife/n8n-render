@@ -1,5 +1,5 @@
 # --- base image: Debian, not Alpine ---------------------------------
-FROM n8nio/n8n:latest-debian           #  <-- do NOT put any comment here
+FROM n8nio/n8n:latest-debian
 
 USER root
 
