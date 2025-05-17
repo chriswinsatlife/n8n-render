@@ -13,8 +13,10 @@ RUN apt-get update && \
 
 # --- pip -------------------------------------------------------------
 ENV PIP_NO_CACHE_DIR=1 PIP_BREAK_SYSTEM_PACKAGES=1
-RUN python3 -m pip install --no-cache-dir \
-        'markitdown[all]' \
+
+# omit the heavy extras that drag in magika/onnxruntime
+RUN python3 -m pip install \
+        markitdown \
         yt-dlp \
         mobi
 
