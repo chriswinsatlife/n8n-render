@@ -8,7 +8,7 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         python3 python3-pip git \
         ffmpeg ghostscript poppler-utils imagemagick tesseract-ocr \
-        chromium ca-certificates fonts-freefont pandoc && \
+        chromium ca-certificates fonts-freefont-ttf pandoc && \
     rm -rf /var/lib/apt/lists/*
 
 # --- pip -------------------------------------------------------------
