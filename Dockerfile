@@ -1,16 +1,23 @@
 FROM n8nio/n8n:next
+
 USER root
 
-# Runtime binaries required by MarkItDown’s optional features
+# Runtime deps + Python
 RUN apk add --no-cache \
     python3 py3-pip \
-    ffmpeg ghostscript poppler-utils imagemagick \
-    tesseract-ocr chromium nss freetype harfbuzz ttf-freefont ca-certificates su-exec
+    pandoc \
+    chromium nss freetype harfbuzz ttf-freefont ca-certificates \
+    ffmpeg imagemagick poppler-utils ghostscript graphicsmagick \
+    tesseract-ocr \
+    su-exec
 
-# Pure-Python libs
-RUN pip install --no-cache-dir 'markitdown[all]' yt-dlp mobi
+# Python libraries (MarkItDown + tools)
+RUN pip install --no-cache-dir \
+    'markitdown[all]' \
+    yt-dlp \
+    mobi
 
-# Custom n8n node
+# Custom n8n MarkItDown node
 WORKDIR /tmp
 RUN git clone --depth 1 https://github.com/bitovi/n8n-nodes-markitdown.git \
  && cd n8n-nodes-markitdown \
@@ -19,7 +26,7 @@ RUN git clone --depth 1 https://github.com/bitovi/n8n-nodes-markitdown.git \
  && cp -R dist/nodes/* /home/node/.n8n/custom \
  && cd / && rm -rf /tmp/n8n-nodes-markitdown
 
-# Puppeteer (bundles its own Chromium for HTML→PDF inside the node)
+# Puppeteer for HTML → PDF
 RUN npm install -g --omit=dev puppeteer \
  && npm cache clean --force
 
