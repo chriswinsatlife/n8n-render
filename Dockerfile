@@ -11,11 +11,11 @@ RUN apk add --no-cache \
     tesseract-ocr \
     su-exec
 
-# Python libraries (MarkItDown + tools)
-RUN pip install --no-cache-dir \
-    'markitdown[all]' \
-    yt-dlp \
-    mobi
+# Python libs
+RUN pip install --no-cache-dir yt-dlp mobi \
+ && git clone --depth 1 https://github.com/microsoft/markitdown.git /tmp/markitdown \
+ && pip install --no-cache-dir --use-pep517 '/tmp/markitdown/packages/markitdown[all]' \
+ && rm -rf /tmp/markitdown
 
 # Custom n8n MarkItDown node
 WORKDIR /tmp
