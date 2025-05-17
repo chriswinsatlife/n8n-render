@@ -1,35 +1,66 @@
 FROM n8nio/n8n:next
+
 USER root
 
+# Installs your original dependencies, plus essential build tools for Python
+# Adjusted the fallback for yt-dlp/mobi to include --break-system-packages for pip
 RUN apk add --no-cache \
-    python3 py3-pip \
     pandoc \
-    chromium nss freetype harfbuzz ttf-freefont ca-certificates \
-    ffmpeg imagemagick poppler-utils ghostscript graphicsmagick \
-    tesseract-ocr su-exec
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    su-exec \
+    ffmpeg \
+    imagemagick \
+    poppler-utils \
+    ghostscript \
+    graphicsmagick \
+    # Added git, python3, py3-pip, and build tools here
+    git \
+    python3 \
+    py3-pip \
+    python3-dev \
+    build-base \
+    libffi-dev \
+    yt-dlp || \
+    (echo "apk install for yt-dlp failed, attempting pip install..." && \
+     python3 -m pip install --no-cache-dir --break-system-packages yt-dlp && \
+     python3 -m pip install --no-cache-dir --break-system-packages mobi)
 
-# allow installs into the system interpreter
-ENV PIP_BREAK_SYSTEM_PACKAGES=1
+# Upgrade pip (with the fix)
+RUN python3 -m pip install --no-cache-dir --break-system-packages --upgrade pip
 
-# base Python tooling
-RUN pip install --no-cache-dir yt-dlp mobi 'magika<0.6'
+# Install yt-dlp and mobi via pip if not handled reliably by the apk fallback,
+# or if you prefer managing them with pip.
+# If the apk line handles them, you might be able to comment this out.
+# Ensure --break-system-packages is used.
+RUN python3 -m pip install --no-cache-dir --break-system-packages yt-dlp mobi
 
-# MarkItDown (local clone) — keep the magika pin
-RUN git clone --depth 1 https://github.com/microsoft/markitdown.git /tmp/markitdown \
- && pip install --no-cache-dir --use-pep517 '/tmp/markitdown/packages/markitdown[all]' 'magika<0.6' \
- && rm -rf /tmp/markitdown
+# Install 'microsoft/markitdown' Python tool
+WORKDIR /opt
+RUN git clone --depth 1 https://github.com/microsoft/markitdown.git && \
+    cd markitdown && \
+    python3 -m pip install --no-cache-dir --use-pep517 --break-system-packages '/opt/markitdown/packages/markitdown[all]' && \
+    cd / && \
+    rm -rf /opt/markitdown
 
-# custom n8n node
-WORKDIR /tmp
-RUN git clone --depth 1 https://github.com/bitovi/n8n-nodes-markitdown.git \
- && cd n8n-nodes-markitdown \
- && npm ci --omit=dev \
- && mkdir -p /home/node/.n8n/custom \
- && cp -R dist/nodes/* /home/node/.n8n/custom \
- && cd / && rm -rf /tmp/n8n-nodes-markitdown
+# Your original Puppeteer installation
+RUN npm install -g puppeteer && \
+  npm cache clean --force
 
-# puppeteer for HTML→PDF
-RUN npm install -g --omit=dev puppeteer && npm cache clean --force
+# Install the '@bitovi/n8n-nodes-markitdown' custom n8n node
+WORKDIR /tmp/custom-node-build
+RUN git clone https://github.com/bitovi/n8n-nodes-markitdown.git . && \
+    npm ci && \
+    npm run build && \
+    mkdir -p /home/node/.n8n/custom && \
+    cp -R dist/nodes/* /home/node/.n8n/custom/ && \
+    rm -rf /tmp/custom-node-build
 
-USER node
+WORKDIR /
+
 EXPOSE 5678
+USER node
