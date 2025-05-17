@@ -11,7 +11,9 @@ RUN apk add --no-cache \
     tesseract-ocr \
     su-exec
 
-# Python libs
+# let pip install to the system interpreter
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+
 RUN pip install --no-cache-dir yt-dlp mobi \
  && git clone --depth 1 https://github.com/microsoft/markitdown.git /tmp/markitdown \
  && pip install --no-cache-dir --use-pep517 '/tmp/markitdown/packages/markitdown[all]' \
