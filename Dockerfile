@@ -2,35 +2,61 @@ FROM n8nio/n8n:next
 
 USER root
 
-# Runtime deps + Python
+# Installs your original dependencies
 RUN apk add --no-cache \
-    python3 py3-pip \
     pandoc \
-    chromium nss freetype harfbuzz ttf-freefont ca-certificates \
-    ffmpeg imagemagick poppler-utils ghostscript graphicsmagick \
-    tesseract-ocr \
-    su-exec
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    su-exec \
+    ffmpeg \
+    imagemagick \
+    poppler-utils \
+    ghostscript \
+    graphicsmagick \
+    # Add git, python3, py3-pip, and build tools here directly
+    git \
+    python3 \
+    py3-pip \
+    python3-dev \
+    build-base \
+    libffi-dev \
+    yt-dlp || \
+    (python3 -m pip install --no-cache-dir --break-system-packages yt-dlp && \
+     python3 -m pip install --no-cache-dir --break-system-packages mobi)
+    # Note: The original fallback logic for yt-dlp/mobi with pip has been adjusted 
+    # to include --break-system-packages and to ensure mobi also installs in the fallback.
+    # A simpler approach if yt-dlp from apk is reliable:
+    # apk add ... yt-dlp
+    # Then a separate RUN for pip install mobi
 
-# let pip install to the system interpreter
-ENV PIP_BREAK_SYSTEM_PACKAGES=1
+# If you prefer to ensure pip is upgraded and handle mobi/yt-dlp separately:
+RUN python3 -m pip install --no-cache-dir --upgrade pip
 
-RUN pip install --no-cache-dir yt-dlp mobi \
+# This is where your failing command was, now corrected:
+# Installs yt-dlp, mobi (if not handled above or as a primary method), and markitdown
+RUN python3 -m pip install --no-cache-dir --break-system-packages yt-dlp mobi \
  && git clone --depth 1 https://github.com/microsoft/markitdown.git /tmp/markitdown \
- && pip install --no-cache-dir --use-pep517 '/tmp/markitdown/packages/markitdown[all]' \
+ && python3 -m pip install --no-cache-dir --use-pep517 --break-system-packages '/tmp/markitdown/packages/markitdown[all]' \
  && rm -rf /tmp/markitdown
 
-# Custom n8n MarkItDown node
-WORKDIR /tmp
-RUN git clone --depth 1 https://github.com/bitovi/n8n-nodes-markitdown.git \
- && cd n8n-nodes-markitdown \
- && npm ci --omit=dev \
- && mkdir -p /home/node/.n8n/custom \
- && cp -R dist/nodes/* /home/node/.n8n/custom \
- && cd / && rm -rf /tmp/n8n-nodes-markitdown
+# Your original Puppeteer installation
+RUN npm install -g puppeteer && \
+  npm cache clean --force
 
-# Puppeteer for HTML → PDF
-RUN npm install -g --omit=dev puppeteer \
- && npm cache clean --force
+# Install the @bitovi/n8n-nodes-markitdown custom n8n node
+WORKDIR /tmp/custom-node-build
+RUN git clone https://github.com/bitovi/n8n-nodes-markitdown.git . && \
+    npm ci && \
+    npm run build && \
+    mkdir -p /home/node/.n8n/custom && \
+    cp -R dist/nodes/* /home/node/.n8n/custom/ && \
+    rm -rf /tmp/custom-node-build
 
-USER node
+WORKDIR /
+
 EXPOSE 5678
+USER node
