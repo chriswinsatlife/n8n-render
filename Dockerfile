@@ -46,9 +46,9 @@ WORKDIR /opt
 RUN git clone --depth 1 https://github.com/microsoft/markitdown.git && \
     cd markitdown && \
     # Install markitdown and its Python dependencies.
-    # The '[all]' installs optional dependencies for markitdown.
+    # TRYING WITHOUT '[all]' to diagnose dependency conflict.
     # --break-system-packages is used to handle PEP 668.
-    python3 -m pip install --no-cache-dir --use-pep517 --break-system-packages './packages/markitdown[all]' && \
+    python3 -m pip install --no-cache-dir --use-pep517 --break-system-packages './packages/markitdown' && \
     cd / && \
     rm -rf /opt/markitdown # Clean up cloned source
 
