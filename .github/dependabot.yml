@@ -1,0 +1,10 @@
+# .github/dependabot.yml
+
+# This file tells Dependabot what to check for updates.
+version: 2
+updates:
+  # This section configures scanning for your n8n Dockerfile
+  - package-ecosystem: "docker" # Scans for updates to Docker base images
+    directory: "/" # Location of your Dockerfile (in the root of the repo)
+    schedule:
+      interval: "daily" # Checks for new n8n versions every day
