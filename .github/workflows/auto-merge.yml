@@ -1,0 +1,25 @@
+# .github/workflows/auto-merge.yml
+
+name: Dependabot Auto-Merge
+
+# This workflow runs on pull requests.
+on: pull_request_target
+
+jobs:
+  auto-merge:
+    # This job will only run for pull requests created by Dependabot.
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable auto-merge for Dependabot PRs
+        # This uses the official GitHub CLI to merge the pull request.
+        # The '--auto' flag tells it to merge only after all required
+        # status checks (like your Render deployment preview) have passed.
+        # The '--merge' flag uses a standard merge commit.
+        run: gh pr merge --auto --merge "$PR_URL"
+        env:
+          # The PR_URL is the URL of the pull request that triggered the workflow.
+          PR_URL: ${{github.event.pull_request.html_url}}
+          # The GITHUB_TOKEN is a secret token automatically provided by GitHub
+          # to allow the workflow to perform actions on your repository.
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
