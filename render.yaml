@@ -1,14 +1,54 @@
 services:
+  # 1. Existing n8n Web Service
   - type: web
     name: n8n
     env: docker
-    region: oregon # optional (defaults to oregon)
-    plan: standard # optional (defaults to starter)
-    branch: main # optional (defaults to master)
-    # dockerCommand: ./webdis.sh # optional (defaults to Dockerfile command)
-    numInstances: 1
-    healthCheckPath: /
+    repo: https://github.com/chriswinsatlife/n8n-render
+    branch: main
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /healthz
     envVars:
+      - fromGroup: n8n-shared-credentials
+      - key: EXECUTIONS_MODE
+        value: queue
+      - key: WEBHOOK_URL
+        value: https://n8n-naps.onrender.com
+      - key: N8N_BINARY_DATA_MODE
+        value: database
+      - key: N8N_PORT
+        value: 5678
+
+  # 2. NEW n8n Background Worker
+  - type: worker
+    name: n8n-background-worker
+    env: docker
+    repo: https://github.com/chriswinsatlife/n8n-render
+    branch: main
+    dockerfilePath: ./Dockerfile
+    startCommand: n8n worker --concurrency=10
+    numInstances: 1
+    envVars:
+      - fromGroup: n8n-shared-credentials
+      - key: EXECUTIONS_MODE
+        value: queue
+      - key: N8N_BINARY_DATA_MODE
+        value: database
+
+  # 3. Redis Service
+  - type: redis
+    name: n8n-redis
+
+# Database Definition with the correct name
+databases:
+  - name: n8n-database
+
+# Environment Group to share credentials
+envVarGroups:
+  - name: n8n-shared-credentials
+    envVars:
+      - key: N8N_ENCRYPTION_KEY
+        sync: false
+      # --- Database Connection (using your original PG* variables) ---
       - key: PGHOST
         fromDatabase:
           name: n8n-database
@@ -29,11 +69,19 @@ services:
         fromDatabase:
           name: n8n-database
           property: password
-    disk:
-      name: n8nDisk
-      mountPath: /home/node/.n8n
-      sizeGB: 10
-
-databases:
-  - name: n8n-database
-    plan: starter
+      # --- Redis Connection ---
+      - key: QUEUE_BULL_REDIS_HOST
+        fromService:
+          type: redis
+          name: n8n-redis
+          property: host
+      - key: QUEUE_BULL_REDIS_PORT
+        fromService:
+          type: redis
+          name: n8n-redis
+          property: port
+      - key: QUEUE_BULL_REDIS_PASSWORD
+        fromService:
+          type: redis
+          name: n8n-redis
+          property: password
