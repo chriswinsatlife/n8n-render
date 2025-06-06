@@ -1,5 +1,6 @@
-# FINAL CORRECTED render.yaml - v5 (with structure fixed)
+# FINAL CORRECTED render.yaml - v6 (Simplified and based on platform errors)
 
+# This defines all services and their connections in one blueprint
 services:
   # 1. Your n8n Web Service (Main)
   - type: web
@@ -10,16 +11,7 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz
     envVars:
-      - fromGroup: n8n-shared-credentials
-      - fromDatabase:
-          name: n8n-database
-          property: connectionString
-        destEnvVar: DATABASE_URL
-      - fromService:
-          type: redis
-          name: n8n-redis
-          property: connectionString
-        destEnvVar: REDIS_URL
+      - fromGroup: n8n-shared-credentials # For N8N_ENCRYPTION_KEY
       - key: EXECUTIONS_MODE
         value: queue
       - key: WEBHOOK_URL
@@ -28,43 +20,52 @@ services:
         value: database
       - key: N8N_PORT
         value: 5678
+      - key: DATABASE_URL # Let Render auto-provide this
+        fromDatabase:
+          name: n8n-database
+          property: connectionString
+      - key: REDIS_URL # Let Render auto-provide this
+        fromService:
+          type: redis
+          name: n8n-redis
+          property: connectionString
 
-  # 2. Your n8n Worker (Private Service)
-  - type: pserv
+  # 2. Your n8n Worker (as a Private Service)
+  - type: pserv # Using Private Service type
     name: n8n-worker
     env: docker
     repo: https://github.com/chriswinsatlife/n8n-render
     branch: main
     dockerfilePath: ./Dockerfile
-    startCommand: n8n worker --concurrency=10
+    dockerCommand: "n8n worker --concurrency=10" # CORRECTED: using dockerCommand
     numInstances: 1
     envVars:
-      - fromGroup: n8n-shared-credentials
-      - fromDatabase:
-          name: n8n-database
-          property: connectionString
-        destEnvVar: DATABASE_URL
-      - fromService:
-          type: redis
-          name: n8n-redis
-          property: connectionString
-        destEnvVar: REDIS_URL
+      - fromGroup: n8n-shared-credentials # For N8N_ENCRYPTION_KEY
       - key: EXECUTIONS_MODE
         value: queue
       - key: N8N_BINARY_DATA_MODE
         value: database
+      - key: DATABASE_URL # Let Render auto-provide this
+        fromDatabase:
+          name: n8n-database
+          property: connectionString
+      - key: REDIS_URL # Let Render auto-provide this
+        fromService:
+          type: redis
+          name: n8n-redis
+          property: connectionString
 
   # 3. Your Redis Service
   - type: redis
     name: n8n-redis
-    ipAllowList: []
+    ipAllowList: [] # CORRECTED: Added required IP allow list
 
 # This section defines the database
 databases:
   - name: n8n-database
-    ipAllowList: []
+    ipAllowList: [] # CORRECTED: Added required IP allow list
 
-# This section defines the group of shared secrets
+# This group now only needs to hold the single, true secret
 envVarGroups:
   - name: n8n-shared-credentials
     envVars:
