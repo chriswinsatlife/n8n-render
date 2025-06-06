@@ -5,13 +5,16 @@ services:
   # 1. Your n8n Web Service (Main)
   - type: web
     name: n8n
+    plan: starter
     env: docker
     repo: https://github.com/chriswinsatlife/n8n-render
     branch: main
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz
+    domains:
+      - n8n.chrisyork.co
     envVars:
-      - fromGroup: n8n-shared-credentials # For N8N_ENCRYPTION_KEY
+      - fromGroup: n8n # For N8N_ENCRYPTION_KEY
       - key: EXECUTIONS_MODE
         value: queue
       - key: WEBHOOK_URL
@@ -26,21 +29,22 @@ services:
           property: connectionString
       - key: REDIS_URL # Let Render auto-provide this
         fromService:
-          type: redis
+          type: keyvalue
           name: n8n-redis
           property: connectionString
 
   # 2. Your n8n Worker (as a Private Service)
-  - type: pserv # Using Private Service type
+  - type: pserv
     name: n8n-worker
+    plan: pro
     env: docker
     repo: https://github.com/chriswinsatlife/n8n-render
     branch: main
     dockerfilePath: ./Dockerfile
-    dockerCommand: "n8n worker --concurrency=10" # CORRECTED: using dockerCommand
+    dockerCommand: "n8n worker --concurrency=10"
     numInstances: 1
     envVars:
-      - fromGroup: n8n-shared-credentials # For N8N_ENCRYPTION_KEY
+      - fromGroup: n8n # For N8N_ENCRYPTION_KEY
       - key: EXECUTIONS_MODE
         value: queue
       - key: N8N_BINARY_DATA_MODE
@@ -51,23 +55,28 @@ services:
           property: connectionString
       - key: REDIS_URL # Let Render auto-provide this
         fromService:
-          type: redis
+          type: keyvalue
           name: n8n-redis
           property: connectionString
 
   # 3. Your Redis Service
-  - type: redis
+  - type: keyvalue
     name: n8n-redis
+    plan: starter
     ipAllowList: [] # CORRECTED: Added required IP allow list
 
 # This section defines the database
 databases:
   - name: n8n-database
+    plan: standard
+    postgresMajorVersion: '15'
+    databaseName: n8ndb_gdod
+    user: n8ndb_gdod_user
     ipAllowList: [] # CORRECTED: Added required IP allow list
 
 # This group now only needs to hold the single, true secret
 envVarGroups:
-  - name: n8n-shared-credentials
+  - name: n8n
     envVars:
       - key: N8N_ENCRYPTION_KEY
         sync: false
