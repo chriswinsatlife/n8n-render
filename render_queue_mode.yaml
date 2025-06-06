@@ -1,5 +1,5 @@
 services:
-  # 1. Existing n8n Web Service
+  # 1. Your existing n8n Web Service
   - type: web
     name: n8n
     env: docker
@@ -8,7 +8,18 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /healthz
     envVars:
-      - fromGroup: n8n-shared-credentials
+      - fromGroup: n8n-shared-credentials # For the encryption key
+      # --- Dynamic connections defined directly on the service ---
+      - fromDatabase:
+          name: n8n-database
+          property: connectionString
+        destEnvVar: DATABASE_URL # n8n automatically uses this
+      - fromService:
+          type: redis
+          name: n8n-redis
+          property: connectionString
+        destEnvVar: REDIS_URL # n8n automatically uses this
+      # --- Service-specific env vars ---
       - key: EXECUTIONS_MODE
         value: queue
       - key: WEBHOOK_URL
@@ -18,70 +29,46 @@ services:
       - key: N8N_PORT
         value: 5678
 
-  # 2. NEW n8n Background Worker
-  - type: worker
-    name: n8n-background-worker
+  # 2. The NEW n8n Worker (as a Private Service)
+  - type: pserv # CORRECTED: Changed from 'worker' to 'pserv' to allow startCommand
+    name: n8n-worker
     env: docker
     repo: https://github.com/chriswinsatlife/n8n-render
     branch: main
     dockerfilePath: ./Dockerfile
-    startCommand: n8n worker --concurrency=10
+    startCommand: n8n worker --concurrency=10 # This is now allowed
     numInstances: 1
     envVars:
-      - fromGroup: n8n-shared-credentials
+      - fromGroup: n8n-shared-credentials # For the encryption key
+      # --- Dynamic connections defined directly on the service ---
+      - fromDatabase:
+          name: n8n-database
+          property: connectionString
+        destEnvVar: DATABASE_URL
+      - fromService:
+          type: redis
+          name: n8n-redis
+          property: connectionString
+        destEnvVar: REDIS_URL
+      # --- Service-specific env vars ---
       - key: EXECUTIONS_MODE
         value: queue
       - key: N8N_BINARY_DATA_MODE
         value: database
 
-  # 3. Redis Service
-  - type: redis
-    name: n8n-redis
+# 3. Redis Service
+- type: redis
+  name: n8n-redis
+  ipAllowList: [] # CORRECTED: Added required IP allow list
 
-# Database Definition with the correct name
+# Database Definition
 databases:
   - name: n8n-database
+    ipAllowList: [] # CORRECTED: Added required IP allow list
 
-# Environment Group to share credentials
+# Environment Group for the single shared secret
 envVarGroups:
   - name: n8n-shared-credentials
     envVars:
       - key: N8N_ENCRYPTION_KEY
         sync: false
-      # --- Database Connection (using your original PG* variables) ---
-      - key: PGHOST
-        fromDatabase:
-          name: n8n-database
-          property: host
-      - key: PGDATABASE
-        fromDatabase:
-          name: n8n-database
-          property: database
-      - key: PGPORT
-        fromDatabase:
-          name: n8n-database
-          property: port
-      - key: PGUSER
-        fromDatabase:
-          name: n8n-database
-          property: user
-      - key: PGPASSWORD
-        fromDatabase:
-          name: n8n-database
-          property: password
-      # --- Redis Connection ---
-      - key: QUEUE_BULL_REDIS_HOST
-        fromService:
-          type: redis
-          name: n8n-redis
-          property: host
-      - key: QUEUE_BULL_REDIS_PORT
-        fromService:
-          type: redis
-          name: n8n-redis
-          property: port
-      - key: QUEUE_BULL_REDIS_PASSWORD
-        fromService:
-          type: redis
-          name: n8n-redis
-          property: password
