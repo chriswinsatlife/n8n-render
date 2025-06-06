@@ -1,7 +1,7 @@
-# FINAL CORRECTED render.yaml - v4 (with indentation fixed)
+# FINAL CORRECTED render.yaml - v5 (with structure fixed)
 
 services:
-  # 1. Your existing n8n Web Service
+  # 1. Your n8n Web Service (Main)
   - type: web
     name: n8n
     env: docker
@@ -29,7 +29,7 @@ services:
       - key: N8N_PORT
         value: 5678
 
-  # 2. The NEW n8n Worker (as a Private Service)
+  # 2. Your n8n Worker (Private Service)
   - type: pserv
     name: n8n-worker
     env: docker
@@ -54,9 +54,7 @@ services:
       - key: N8N_BINARY_DATA_MODE
         value: database
 
-# This section defines the services themselves
-services:
-  # 3. Redis Service
+  # 3. Your Redis Service
   - type: redis
     name: n8n-redis
     ipAllowList: []
