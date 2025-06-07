@@ -22,9 +22,6 @@ RUN apk add --no-cache \
     pip install --no-cache-dir yt-dlp \
     pip install --no-cache-dir mobi
 
-RUN npm install -g puppeteer && \
-  npm cache clean --force
-
 EXPOSE 5678
 # Switch back to the default user
 USER node
