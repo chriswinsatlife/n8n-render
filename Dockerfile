@@ -1,30 +1,40 @@
+# ───────────────────────── original base image ─────────────────────────
 FROM n8nio/n8n:1.102.4
 
-# Switch to root to install packages
+# ───────────────── enable community nodes ──────────────────────────────
+ENV N8N_COMMUNITY_PACKAGES_ENABLED=true \
+    N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
+
+# ───────────────── switch to root for installs ─────────────────────────
 USER root
 
-# Install necessary packages using apk (Alpine package manager)
+# ───────────────── all your Alpine + pip + Markitdown steps ────────────
 RUN apk add --no-cache \
-    pandoc \
-    chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    su-exec \
-    ffmpeg \
-    imagemagick \
-    poppler-utils \
-    ghostscript \
-    graphicsmagick \
-    yt-dlp || \
-    pip install --no-cache-dir yt-dlp \
-    pip install --no-cache-dir mobi \
-    && npm install --omit=dev --prefix /home/node/.n8n/nodes @bitovi/n8n-nodes-markitdown \
-    && mv /home/node/.n8n/nodes/node_modules/@bitovi/n8n-nodes-markitdown/dist/nodes/Markitdown/Markitdown.node.js \
-          /home/node/.n8n/nodes/node_modules/@bitovi/n8n-nodes-markitdown/dist/nodes/Markitdown/MarkitdownNode.node.js
+        pandoc \
+        chromium \
+        nss \
+        freetype \
+        harfbuzz \
+        ca-certificates \
+        ttf-freefont \
+        su-exec \
+        ffmpeg \
+        imagemagick \
+        poppler-utils \
+        ghostscript \
+        graphicsmagick \
+        yt-dlp \
+        py3-pip \
+        git \
+    && pip install --no-cache-dir yt-dlp mobi \
+    && git clone --depth 1 https://github.com/bitovi/n8n-nodes-markitdown /tmp/md \
+    && mkdir -p /home/node/.n8n/nodes/node_modules/@bitovi \
+    && cp -R /tmp/md /home/node/.n8n/nodes/node_modules/@bitovi/n8n-nodes-markitdown \
+    && cd /home/node/.n8n/nodes/node_modules/@bitovi/n8n-nodes-markitdown/dist/nodes/Markitdown \
+    && mv Markitdown.node.js MarkitdownNode.node.js \
+    && printf '\nmodule.exports.MarkitdownNode = module.exports.Markitdown;\n' >> MarkitdownNode.node.js \
+    && rm -rf /tmp/md
 
-EXPOSE 5678
-# Switch back to the default user
+# ───────────────── back to non-root ────────────────────────────────────
 USER node
+EXPOSE 5678
