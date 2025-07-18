@@ -1,14 +1,10 @@
-# ───────────────────────── original base image ─────────────────────────
 FROM n8nio/n8n:1.102.4
 
-# ───────────────── enable community nodes ──────────────────────────────
 ENV N8N_COMMUNITY_PACKAGES_ENABLED=true \
     N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
 
-# ───────────────── switch to root for installs ─────────────────────────
 USER root
 
-# ───────────────── all your Alpine + pip + Markitdown steps ────────────
 RUN apk add --no-cache \
         pandoc \
         chromium \
@@ -35,6 +31,5 @@ RUN apk add --no-cache \
     && printf '\nmodule.exports.MarkitdownNode = module.exports.Markitdown;\n' >> MarkitdownNode.node.js \
     && rm -rf /tmp/md
 
-# ───────────────── back to non-root ────────────────────────────────────
 USER node
 EXPOSE 5678
