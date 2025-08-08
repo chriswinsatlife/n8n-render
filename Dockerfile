@@ -1,4 +1,4 @@
-FROM n8nio/n8n:1.105.3
+FROM n8nio/n8n:1.105.4
 
 # Switch to root to install packages
 USER root
