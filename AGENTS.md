@@ -44,6 +44,18 @@ If you want to clear the command (set it to empty), you send:
 "dockerCommand": ""
 ```
 
+## Checking the Environment Variables on Render
+
+- Render's CLI only allows you to view environment variables for a project (i.e. a collection of services)
+- To view the environment variables for an individual service, you must use cURL with the API
+
+```bash
+source .env && curl --request GET \
+     --url "https://api.render.com/v1/services/srv-d117ruqdbo4c739o7bhg/env-vars?limit=50" \
+     --header "accept: application/json" \
+     --header "authorization: Bearer ${RENDER_API_KEY}"
+```
+
 ## Rules of Engagement
 - Never ask the user to push code, make a commit, check GitHub, check Render, deploy on Render, inspect Render logs, etc; you MUST do this yourself in 100% of instances with CLI or API cURL
 - Never ask for details like service IDs, deploy IDs, etc. Look these up on your own.
