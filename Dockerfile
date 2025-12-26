@@ -17,7 +17,10 @@ RUN apk add --no-cache pandoc ffmpeg imagemagick poppler-utils ghostscript graph
     pip3 install --no-cache-dir --break-system-packages yt-dlp mobi || true
 
 # Ensure node is findable for scripts using #!/usr/bin/env node
-RUN ln -sf "$(which node)" /usr/bin/node || true
+# In Alpine node images, node is at /usr/local/bin/node
+RUN ln -sf /usr/local/bin/node /usr/bin/node 2>/dev/null || \
+    ln -sf /usr/bin/node /usr/bin/node 2>/dev/null || \
+    (find / -name "node" -type f 2>/dev/null | head -1 | xargs -I {} ln -sf {} /usr/bin/node) || true
 
 EXPOSE 5678
 USER node
