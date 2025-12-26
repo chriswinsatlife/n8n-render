@@ -7,6 +7,10 @@ RUN set -eux; \
     apt-get install -y --no-install-recommends \
         pandoc \
         chromium \
+        libnss3 \
+        libfreetype6 \
+        libharfbuzz0b \
+        fonts-freefont-ttf \
         ca-certificates \
         ffmpeg \
         imagemagick \
@@ -17,7 +21,8 @@ RUN set -eux; \
         python3-pip; \
     rm -rf /var/lib/apt/lists/*; \
     pip3 install --no-cache-dir --break-system-packages yt-dlp mobi || \
-    pip3 install --no-cache-dir yt-dlp mobi || true
+    pip3 install --no-cache-dir yt-dlp mobi || true; \
+    npm install -g puppeteer && npm cache clean --force
 
 EXPOSE 5678
 USER node
