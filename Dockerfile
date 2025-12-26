@@ -12,19 +12,13 @@ RUN ARCH=$(uname -m) && \
         -U --allow-untrusted add apk-tools && \
     rm -rf sbin apk-tools-static-*.apk
 
-# Now apk works normally
-RUN apk add --no-cache pandoc ffmpeg imagemagick poppler-utils ghostscript graphicsmagick python3 py3-pip && \
+# Now apk works normally - also add nodejs to ensure node binary is available
+RUN apk add --no-cache pandoc ffmpeg imagemagick poppler-utils ghostscript graphicsmagick python3 py3-pip nodejs && \
     pip3 install --no-cache-dir --break-system-packages yt-dlp mobi || true
 
-# Debug: find where node is and create symlink
-RUN echo "=== Finding node ===" && \
-    which node || echo "which node failed" && \
-    ls -la /usr/local/bin/node 2>/dev/null || echo "not at /usr/local/bin/node" && \
-    ls -la /usr/bin/node 2>/dev/null || echo "not at /usr/bin/node" && \
-    find / -name "node" -type f 2>/dev/null || echo "find failed" && \
-    echo "=== Creating symlink ===" && \
-    ln -sf /usr/local/bin/node /usr/bin/node && \
-    ls -la /usr/bin/node
+# Ensure /usr/bin/node exists for #!/usr/bin/env node shebangs
+RUN ln -sf /usr/local/bin/node /usr/bin/node 2>/dev/null || \
+    ln -sf /usr/bin/node /usr/bin/node 2>/dev/null || true
 
 EXPOSE 5678
 USER node
