@@ -1,68 +1,20 @@
-FROM node:22-bookworm-slim
+FROM n8nio/n8n:2.1.4
 
 USER root
 
-ENV NODE_ENV=production
+# Reinstall apk-tools since n8n removes it in v2.1.0+
+RUN ARCH=$(uname -m) && \
+    wget -qO- "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/" | \
+    grep -o 'href="apk-tools-static-[^"]*\.apk"' | head -1 | cut -d'"' -f2 | \
+    xargs -I {} wget -q "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/{}" && \
+    tar -xzf apk-tools-static-*.apk && \
+    ./sbin/apk.static -X http://dl-cdn.alpinelinux.org/alpine/latest-stable/main \
+        -U --allow-untrusted add apk-tools && \
+    rm -rf sbin apk-tools-static-*.apk
 
-# Ensure `node` is discoverable even if the runtime PATH is restricted.
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Now apk works normally
+RUN apk add --no-cache pandoc ffmpeg imagemagick poppler-utils ghostscript graphicsmagick python3 py3-pip && \
+    pip3 install --no-cache-dir --break-system-packages yt-dlp mobi || true
 
-# Install OS-level dependencies for rendering/conversion tasks.
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        ca-certificates \
-        pandoc \
-        chromium \
-        ffmpeg \
-        imagemagick \
-        poppler-utils \
-        ghostscript \
-        graphicsmagick \
-        python3 \
-        python3-venv \
-        python3-pip \
-        tini \
-        build-essential; \
-    rm -rf /var/lib/apt/lists/*; \
-    ln -sf /usr/local/bin/node /usr/bin/node
-
-# Install Python tooling into an isolated venv.
-ENV VIRTUAL_ENV=/opt/venv
-RUN set -eux; \
-    python3 -m venv "$VIRTUAL_ENV"; \
-    "$VIRTUAL_ENV/bin/pip" install --no-cache-dir yt-dlp mobi
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
-
-ARG N8N_VERSION=2.1.4
-
-# Install n8n itself.
-RUN set -eux; \
-    npm install -g "n8n@${N8N_VERSION}"; \
-    # Render workers sometimes execute Node scripts directly (via shebang).
-    # Make this robust even if PATH is empty/restricted by converting all
-    # `#!/usr/bin/env node` shebangs we install into `#!/usr/bin/node`.
-    ( \
-        grep -rl "^#!/usr/bin/env node" /usr/local/bin /usr/local/lib/node_modules/n8n 2>/dev/null || true; \
-    ) | while IFS= read -r f; do \
-        if [ -f "$f" ]; then \
-            tmp="$(mktemp)"; \
-            printf '#!/usr/bin/node\n' > "$tmp"; \
-            tail -n +2 "$f" >> "$tmp"; \
-            mv "$tmp" "$f"; \
-            chmod 755 "$f"; \
-        fi; \
-    done
-
-# Persist data to Render disk at /home/node/.n8n
-RUN set -eux; \
-    mkdir -p /home/node/.n8n; \
-    chown -R node:node /home/node
-
-WORKDIR /home/node
 EXPOSE 5678
-
 USER node
-# Call the JS entrypoint with an absolute Node path so we don't depend on
-# `/usr/bin/env node` resolution at runtime.
-ENTRYPOINT ["tini", "--", "/usr/local/bin/node", "/usr/local/lib/node_modules/n8n/bin/n8n"]
