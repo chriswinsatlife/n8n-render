@@ -4,21 +4,25 @@ USER root
 
 # Reinstall apk-tools since n8n removes it in v2.1.0+
 RUN ARCH=$(uname -m) && \
-    wget -qO- "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/" | \
-    grep -o 'href="apk-tools-static-[^"]*\.apk"' | head -1 | cut -d'"' -f2 | \
-    xargs -I {} wget -q "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/{}" && \
-    tar -xzf apk-tools-static-*.apk && \
-    ./sbin/apk.static -X http://dl-cdn.alpinelinux.org/alpine/latest-stable/main \
+        wget -qO- "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/" | \
+        grep -o 'href="apk-tools-static-[^"]*\.apk"' | head -1 | cut -d'"' -f2 | \
+        xargs -I {} wget -q "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/{}" && \
+        tar -xzf apk-tools-static-*.apk && \
+        ./sbin/apk.static -X http://dl-cdn.alpinelinux.org/alpine/latest-stable/main \
         -U --allow-untrusted add apk-tools && \
-    rm -rf sbin apk-tools-static-*.apk
+        rm -rf sbin apk-tools-static-*.apk
 
-# Now apk works normally - also add nodejs to ensure node binary is available
-RUN apk add --no-cache pandoc ffmpeg imagemagick poppler-utils ghostscript graphicsmagick python3 py3-pip nodejs && \
-    pip3 install --no-cache-dir --break-system-packages yt-dlp mobi || true
+# Now apk works normally - install additional packages (NOT nodejs - use existing node)
+RUN apk add --no-cache pandoc ffmpeg imagemagick poppler-utils ghostscript graphicsmagick python3 py3-pip && \
+        pip3 install --no-cache-dir --break-system-packages yt-dlp mobi || true
 
-# Ensure node binary is available (installed via apk at /usr/bin/node)
-# Do not override the binary location; keep default paths intact
-ENV PATH="/usr/bin:/usr/local/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:$PATH"
+# Ensure node binary exists in both common locations
+RUN apk add --no-cache --force-overwrite nodejs && \
+        ln -sf /usr/bin/node /usr/local/bin/node && \
+        ln -sf /usr/local/bin/node /usr/bin/node
+
+# Verify node is accessible
+RUN which node && node --version && /usr/bin/env node --version
 
 EXPOSE 5678
 USER node
