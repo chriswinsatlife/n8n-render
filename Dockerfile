@@ -1,4 +1,4 @@
-FROM n8nio/n8n:2.1.4
+FROM n8nio/n8n:2.0.2
 
 USER root
 
@@ -29,7 +29,7 @@ RUN apk add --no-cache \
 RUN python3 -m venv /opt/venv && \
     /opt/venv/bin/pip install --no-cache-dir yt-dlp mobi
 
-ENV PATH="/opt/venv/bin:$PATH"
+ENV PATH="/usr/local/bin:/usr/bin:/bin:/opt/venv/bin:$PATH"
 
 # Create symlink to make /usr/bin/env node work
 RUN ln -sf /usr/local/bin/node /usr/bin/node
