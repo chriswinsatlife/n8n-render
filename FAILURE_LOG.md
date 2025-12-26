@@ -6,7 +6,13 @@
 - **Repo:** chriswinsatlife/n8n-render (Dockerfile lives here)
 
 ## Current Status
-**DOWN** - All attempts fail at runtime with `/usr/bin/env: 'node': No such file or directory`
+**UP AND WORKING** - Worker running with `dockerCommand: worker --concurrency=10`
+
+### Final Working Configuration (2025-12-26)
+- **Image:** `docker.io/n8nio/n8n:latest`
+- **Runtime:** `image`
+- **dockerCommand:** `worker --concurrency=10`
+- **Key insight:** The command `worker --concurrency=10` is passed as arguments to the image's ENTRYPOINT (`/docker-entrypoint.sh`), which properly sets up the environment before running `n8n worker --concurrency=10`
 
 ---
 
@@ -169,14 +175,34 @@ The dockerCommand `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n w
 - **dockerCommand:** (empty)
 - **Runtime:** FAILED - `/usr/bin/env: 'node': No such file or directory`
 
-### Deploy dep-d57dhu63jp1c73atsfag - FAILED (CRITICAL TEST)
+### Deploy dep-d57dhu63jp1c73atsfag - FAILED
 - **Change:** Switched to official n8n image directly - NO custom Dockerfile
 - **Image:** `docker.io/n8nio/n8n:latest`
 - **Runtime:** `image` (not `docker`)
 - **dockerCommand:** (empty)
-- **Env vars:** `EXECUTIONS_MODE=queue`, `EXECUTIONS_PROCESS=worker`
 - **Runtime:** FAILED - `/usr/bin/env: 'node': No such file or directory`
-- **CONCLUSION:** Even the official n8n image fails on Render background worker. This proves it's NOT the Dockerfile - it's a Render platform issue.
+
+### Deploy dep-d57dj315pdvs739cm4dg - PARTIAL SUCCESS (NOT A WORKER)
+- **Image:** `docker.io/n8nio/n8n:latest`
+- **Runtime:** `image`
+- **dockerCommand:** (empty)
+- **Env vars:** `EXECUTIONS_MODE=queue`, `EXECUTIONS_PROCESS=worker`
+- **Status:** LIVE but running as MAIN instance, NOT worker
+- **Problem:** Logs showed "Editor is now accessible via: https://n8n-naps.onrender.com" - running web UI instead of worker
+- **Root cause:** Env vars alone don't make it run as worker; the `n8n worker` command is required
+
+### Deploy dep-d57dkcp5pdvs739cmnm0 - SUCCESS!!! WORKER RUNNING!!!
+- **Image:** `docker.io/n8nio/n8n:latest`
+- **Runtime:** `image`
+- **dockerCommand:** `worker --concurrency=10`
+- **Status:** LIVE and running as WORKER
+- **Logs confirm:**
+  - `worker.js` init logs (not `start.js`)
+  - `n8n Task Broker ready on 127.0.0.1, port 5679`
+  - `Registered runner "JS Task Runner"`
+  - `n8nEventLog-worker.log` (worker-specific log file)
+  - NO "Editor is now accessible" message
+- **Why it works:** The `dockerCommand: worker --concurrency=10` is passed as ARGUMENTS to the existing ENTRYPOINT (`/docker-entrypoint.sh`), not as a replacement. The entrypoint properly sets up PATH/environment, then runs `n8n worker --concurrency=10`
 
 ---
 
@@ -208,8 +234,9 @@ The dockerCommand `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n w
 
 ---
 
-## FAILED dockerCommand Values
+## dockerCommand Values Tested
 
+### WITH CUSTOM DOCKERFILE (all FAILED)
 1. `worker --concurrency=10` - FAILED
 2. `n8n worker --concurrency=10` - FAILED  
 3. `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10` - FAILED
@@ -217,6 +244,11 @@ The dockerCommand `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n w
 5. `tini -- /docker-entrypoint.sh worker --concurrency=10` - FAILED
 6. `/bin/sh -c 'export PATH=/usr/local/bin:/usr/bin:$PATH && exec n8n worker --concurrency=10'` - FAILED
 7. (empty - rely on Dockerfile CMD) - FAILED
+
+### WITH OFFICIAL IMAGE (runtime: image) - SUCCESS!
+8. `worker --concurrency=10` - **SUCCESS!**
+   - When using `runtime: image` with official n8n image, dockerCommand is passed as ARGUMENTS to ENTRYPOINT
+   - This is different from `runtime: docker` where dockerCommand REPLACES ENTRYPOINT
 
 ---
 
