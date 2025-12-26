@@ -1,30 +1,37 @@
-FROM n8nio/n8n:next
+FROM n8nio/n8n:2.1.4
 
-# Switch to root to install packages
 USER root
 
-# Install necessary packages using apk (Alpine package manager)
+# Reinstall apk-tools since n8n 2.1.0+ removes it
+# Source: https://community.n8n.io/t/docker-image-is-distroless-cannot-install-git-gh-cli-need-extensible-variant/240490
+RUN ARCH=$(uname -m) && \
+    wget -qO- "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/" | \
+    grep -o 'href="apk-tools-static-[^"]*\.apk"' | head -1 | cut -d'"' -f2 | \
+    xargs -I {} wget -q "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/{}" && \
+    tar -xzf apk-tools-static-*.apk && \
+    ./sbin/apk.static -X http://dl-cdn.alpinelinux.org/alpine/latest-stable/main \
+        -U --allow-untrusted add apk-tools && \
+    rm -rf sbin apk-tools-static-*.apk
+
+# Now apk works - install our dependencies
 RUN apk add --no-cache \
-    pandoc \
     chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    su-exec \
     ffmpeg \
     imagemagick \
     poppler-utils \
     ghostscript \
     graphicsmagick \
-    yt-dlp || \
-    pip install --no-cache-dir yt-dlp \
-    pip install --no-cache-dir mobi
+    pandoc \
+    python3 \
+    py3-pip
 
-RUN npm install -g puppeteer && \
-  npm cache clean --force
+# Install Python packages
+RUN python3 -m venv /opt/venv && \
+    /opt/venv/bin/pip install --no-cache-dir yt-dlp mobi
 
-EXPOSE 5678
-# Switch back to the default user
+ENV PATH="/opt/venv/bin:$PATH"
+
 USER node
+
+# Keep the original ENTRYPOINT from n8n image: ["tini", "--", "/docker-entrypoint.sh"]
+# This passes any CMD/args to n8n, so "worker --concurrency=10" becomes "n8n worker --concurrency=10"
