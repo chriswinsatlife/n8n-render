@@ -1,14 +1,10 @@
-FROM n8nio/n8n:2.1.4 AS n8n
-
-FROM debian:bookworm-slim
+FROM node:18-bookworm-slim
 
 USER root
 
 ENV NODE_ENV=production
-ENV NODE_ICU_DATA=/usr/local/lib/node_modules/full-icu
 
-# Install OS-level dependencies. We can't use apk/apt inside the upstream n8n
-# image because it does not include a package manager.
+# Install OS-level dependencies for rendering/conversion tasks.
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
@@ -23,22 +19,25 @@ RUN set -eux; \
         python3 \
         python3-venv \
         python3-pip \
-        tini; \
+        tini \
+        build-essential; \
     rm -rf /var/lib/apt/lists/*
 
+# Install Python tooling into an isolated venv.
 ENV VIRTUAL_ENV=/opt/venv
 RUN set -eux; \
     python3 -m venv "$VIRTUAL_ENV"; \
     "$VIRTUAL_ENV/bin/pip" install --no-cache-dir yt-dlp mobi
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Bring in the exact n8n + Node.js runtime from the official image.
-COPY --from=n8n /usr/local/ /usr/local/
+ARG N8N_VERSION=2.1.4
 
+# Install n8n itself.
 RUN set -eux; \
-    if ! id node >/dev/null 2>&1; then \
-        useradd -m -u 1000 -s /bin/sh node; \
-    fi; \
+    npm install -g "n8n@${N8N_VERSION}"
+
+# Persist data to Render disk at /home/node/.n8n
+RUN set -eux; \
     mkdir -p /home/node/.n8n; \
     chown -R node:node /home/node
 
