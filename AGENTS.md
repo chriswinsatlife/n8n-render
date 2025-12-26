@@ -16,6 +16,7 @@ The project has other services on Render, including a Postgres DB and Redis serv
 - THERE IS DOCKERFILE PATH, DOCKER BUILD CONTEXT DIRECTORY, DOCKER COMMAND, PRE-DEPLOY COMMAND, AND THAT'S FUCKING IT
 
 ## Notes
+- The n8n worker needs to receive `worker --concurrency=10` arguments somehow. Without dockerCommand, it would just start as a regular n8n instance, not a worker.
 - The Render background worker has a Docker command field filled; it has changed many times
 - The Render background worker repo has no Dockerfile; it simply references the Dockerfile in this `n8n-render` repo
 - n8n background worker service on Render fails at runtime with /usr/bin/env: 'node': No such file or directory despite successful Docker builds.

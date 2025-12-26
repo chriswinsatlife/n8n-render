@@ -2,24 +2,19 @@
 set -e
 
 echo "--- Worker Entrypoint Starting ---"
-echo "Original PATH: $PATH"
 echo "User: $(whoami)"
+echo "PATH: $PATH"
 
-# Force PATH to include node location
-export PATH=/usr/local/bin:/usr/bin:/bin:$PATH
-echo "New PATH: $PATH"
-
-# Verify node exists
-if command -v node >/dev/null 2>&1; then
-    echo "Node found at: $(command -v node)"
-    node -v
-else
-    echo "CRITICAL: Node not found in PATH"
-    ls -l /usr/local/bin/node || echo "/usr/local/bin/node missing"
-    ls -l /usr/bin/node || echo "/usr/bin/node missing"
+# Locate node
+NODE_BIN=$(command -v node || echo "/usr/local/bin/node")
+if [ ! -x "$NODE_BIN" ]; then
+    echo "Node not found at $NODE_BIN, checking /usr/bin/node"
+    NODE_BIN="/usr/bin/node"
 fi
 
-# Execute n8n worker
+echo "Using Node: $NODE_BIN"
+$NODE_BIN -v
+
+# Execute n8n worker directly with node to bypass shebang/env issues
 echo "Exec n8n worker..."
-# We execute the n8n binary directly using node to bypass any shebang/env issues in the launcher script
-exec /usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10
+exec $NODE_BIN /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10
