@@ -26,8 +26,8 @@ RUN apk add --no-cache \
 RUN find /usr/local/lib/node_modules -type f -name "*.js" -exec grep -l '#!/usr/bin/env node' {} \; | xargs -r sed -i 's|#!/usr/bin/env node|#!/usr/local/bin/node|g'
 RUN sed -i 's|#!/usr/bin/env node|#!/usr/local/bin/node|g' /usr/local/lib/node_modules/n8n/bin/n8n || true
 
-# Symlink node to /usr/bin for any remaining /usr/bin/env node calls
-RUN ln -sf /usr/local/bin/node /usr/bin/node
+# Copy node binary to /usr/bin (not symlink - Render may not preserve symlinks)
+RUN cp /usr/local/bin/node /usr/bin/node
 
 # Copy worker entrypoint
 COPY worker-entrypoint.sh /worker-entrypoint.sh
