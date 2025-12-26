@@ -1,13 +1,14 @@
-FROM node:22-bookworm-slim
+FROM n8nio/n8n:2.1.4 AS n8n
+
+FROM debian:bookworm-slim
 
 USER root
 
 ENV NODE_ENV=production
+ENV NODE_ICU_DATA=/usr/local/lib/node_modules/full-icu
 
-# Ensure `node` is discoverable even if the runtime PATH is restricted.
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-
-# Install OS-level dependencies for rendering/conversion tasks.
+# Install OS-level dependencies. We can't use apk/apt inside the upstream n8n
+# image because it does not include a package manager.
 RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
@@ -22,40 +23,22 @@ RUN set -eux; \
         python3 \
         python3-venv \
         python3-pip \
-        tini \
-        build-essential; \
-    rm -rf /var/lib/apt/lists/*; \
-    ln -sf /usr/local/bin/node /usr/bin/node
+        tini; \
+    rm -rf /var/lib/apt/lists/*
 
-# Install Python tooling into an isolated venv.
 ENV VIRTUAL_ENV=/opt/venv
 RUN set -eux; \
     python3 -m venv "$VIRTUAL_ENV"; \
     "$VIRTUAL_ENV/bin/pip" install --no-cache-dir yt-dlp mobi
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-ARG N8N_VERSION=2.1.4
+# Bring in the exact n8n + Node.js runtime from the official image.
+COPY --from=n8n /usr/local/ /usr/local/
 
-# Install n8n itself.
 RUN set -eux; \
-    npm install -g "n8n@${N8N_VERSION}"; \
-    # Render workers sometimes execute Node scripts directly (via shebang).
-    # Make this robust even if PATH is empty/restricted by converting all
-    # `#!/usr/bin/env node` shebangs we install into `#!/usr/bin/node`.
-    ( \
-        grep -rl "^#!/usr/bin/env node" /usr/local/bin /usr/local/lib/node_modules/n8n 2>/dev/null || true; \
-    ) | while IFS= read -r f; do \
-        if [ -f "$f" ]; then \
-            tmp="$(mktemp)"; \
-            printf '#!/usr/bin/node\n' > "$tmp"; \
-            tail -n +2 "$f" >> "$tmp"; \
-            mv "$tmp" "$f"; \
-            chmod 755 "$f"; \
-        fi; \
-    done
-
-# Persist data to Render disk at /home/node/.n8n
-RUN set -eux; \
+    if ! id node >/dev/null 2>&1; then \
+        useradd -m -u 1000 -s /bin/sh node; \
+    fi; \
     mkdir -p /home/node/.n8n; \
     chown -R node:node /home/node
 
@@ -63,6 +46,4 @@ WORKDIR /home/node
 EXPOSE 5678
 
 USER node
-# Call the JS entrypoint with an absolute Node path so we don't depend on
-# `/usr/bin/env node` resolution at runtime.
-ENTRYPOINT ["tini", "--", "/usr/local/bin/node", "/usr/local/lib/node_modules/n8n/bin/n8n"]
+ENTRYPOINT ["tini", "--", "n8n"]
