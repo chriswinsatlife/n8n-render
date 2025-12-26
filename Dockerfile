@@ -4,6 +4,9 @@ USER root
 
 ENV NODE_ENV=production
 
+# Ensure `node` is discoverable even if the runtime PATH is restricted.
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 # Install OS-level dependencies for rendering/conversion tasks.
 RUN set -eux; \
     apt-get update; \
@@ -21,7 +24,8 @@ RUN set -eux; \
         python3-pip \
         tini \
         build-essential; \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/*; \
+    ln -sf /usr/local/bin/node /usr/bin/node
 
 # Install Python tooling into an isolated venv.
 ENV VIRTUAL_ENV=/opt/venv
