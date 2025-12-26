@@ -14,7 +14,7 @@ Optionally override your Dockerfile's CMD and ENTRYPOINT instructions with a dif
 `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10`
 
 ### Docker Command - Current 
-``
+`/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10`
 
 —
 

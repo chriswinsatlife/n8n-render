@@ -32,7 +32,3 @@ RUN python3 -m venv /opt/venv && \
 ENV PATH="/opt/venv/bin:$PATH"
 
 USER node
-
-# Override ENTRYPOINT to call node directly - bypasses shebang issues
-ENTRYPOINT ["tini", "--", "/usr/local/bin/node", "/usr/local/lib/node_modules/n8n/bin/n8n"]
-CMD ["worker", "--concurrency=10"]
