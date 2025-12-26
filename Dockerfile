@@ -22,6 +22,11 @@ RUN apk add --no-cache \
     pip install --no-cache-dir yt-dlp \
     pip install --no-cache-dir mobi
 
+# Copy worker entrypoint
+COPY worker-entrypoint.sh /worker-entrypoint.sh
+RUN chmod +x /worker-entrypoint.sh
+RUN ln -s /usr/local/bin/node /usr/bin/node
+
 EXPOSE 5678
 # Switch back to the default user
 USER node
