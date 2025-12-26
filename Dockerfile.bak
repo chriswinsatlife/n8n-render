@@ -13,9 +13,8 @@ RUN ARCH=$(uname -m) && \
         -U --allow-untrusted add apk-tools && \
     rm -rf sbin apk-tools-static-*.apk
 
-# Now apk works - install our dependencies
+# Now apk works - install our dependencies (no chromium - too big)
 RUN apk add --no-cache \
-    chromium \
     ffmpeg \
     imagemagick \
     poppler-utils \
@@ -34,4 +33,5 @@ ENV PATH="/opt/venv/bin:$PATH"
 USER node
 
 # Keep the original ENTRYPOINT from n8n image: ["tini", "--", "/docker-entrypoint.sh"]
-# This passes any CMD/args to n8n, so "worker --concurrency=10" becomes "n8n worker --concurrency=10"
+# Set CMD to run as worker - ENTRYPOINT will prepend "n8n" to this
+CMD ["worker", "--concurrency=10"]
