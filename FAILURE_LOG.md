@@ -8,112 +8,81 @@
 ## Current Status
 **DOWN** - All attempts fail at runtime with `/usr/bin/env: 'node': No such file or directory`
 
-### Latest Attempt (2025-12-26)
-- Set service env `PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/opt/venv/bin`
-- Kept dockerCommand: `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10`
-- Deploy `dep-d57c5nmuk2gs73cvada0` **FAILED**: runtime `/usr/bin/env: 'node': No such file or directory`
+---
 
-### Current Change (2025-12-26)
-- Pinned Dockerfile base to `n8nio/n8n:2.0.2` (pre-apk removal)
-- Service dockerCommand unchanged: `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10`
-- Service PATH env remains overridden as above
-- Render support message drafted at `render_support_message.md`
-- Deploy pending after pin
+## Session Log (2025-12-26)
+
+### Deploy dep-d57cateuk2gs73cve6m0 - FAILED
+- **Commit:** ab677b2 - Add symlink and debug output for node verification
+- **Dockerfile:** n8n:2.0.2 + apk-tools workaround + symlink `/usr/bin/node -> /usr/local/bin/node`
+- **dockerCommand:** `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10`
+- **Build:** SUCCESS - Debug output confirmed:
+  - `/usr/bin/node` symlink exists
+  - `/usr/bin/env node -v` returns v22.21.1
+  - PATH includes `/usr/local/bin`
+- **Runtime:** FAILED - `/usr/bin/env: 'node': No such file or directory`
+- **Conclusion:** Symlinks created at build time do NOT persist at Render runtime
+
+### Deploy PENDING - e66256c
+- **Commit:** e66256c - Explicitly set PATH in ENV to persist at runtime
+- **Change:** `ENV PATH="/usr/local/bin:/usr/bin:/bin:/opt/venv/bin:$PATH"`
+- **dockerCommand:** `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10`
+- **Status:** Waiting for deploy
+
+---
+
+## Root Cause Analysis
+
+Research (Exa) found that Render's `dockerCommand` bypasses the image ENTRYPOINT, which means:
+1. The entrypoint script that sets up PATH never runs
+2. Container starts with minimal environment
+3. Even though symlinks exist in the image, PATH may not include the directories
+
+**Key finding:** The symlink DOES persist in the image. The issue is PATH not being set at runtime when using dockerCommand.
 
 ---
 
 ## FAILED Dockerfile Approaches
 
-### 1. n8n:2.1.4 Alpine + apk-tools workaround (community solution)
-```dockerfile
-FROM n8nio/n8n:2.1.4
-USER root
-RUN ARCH=$(uname -m) && \
-    wget -qO- "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/" | \
-    grep -o 'href="apk-tools-static-[^"]*\.apk"' | head -1 | cut -d'"' -f2 | \
-    xargs -I {} wget -q "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/{}" && \
-    tar -xzf apk-tools-static-*.apk && \
-    ./sbin/apk.static -X http://dl-cdn.alpinelinux.org/alpine/latest-stable/main \
-        -U --allow-untrusted add apk-tools && \
-    rm -rf sbin apk-tools-static-*.apk
-RUN apk add --no-cache chromium ffmpeg ...
-USER node
-```
-**Result:** BUILD succeeds, RUNTIME fails with `/usr/bin/env: 'node': No such file or directory`
+### 1. n8n:2.1.4 Alpine + apk-tools workaround
+**Result:** BUILD succeeds, RUNTIME fails
 
 ### 2. Debian multi-stage (copy /usr/local from n8n Alpine)
-```dockerfile
-FROM n8nio/n8n:2.1.4 AS n8n
-FROM debian:bookworm-slim
-COPY --from=n8n /usr/local/ /usr/local/
-```
-**Result:** BUILD fails - musl/glibc binary incompatibility. Node binary from Alpine won't execute on Debian.
+**Result:** BUILD fails - musl/glibc incompatibility
 
 ### 3. node:22-bookworm-slim + npm install n8n
-```dockerfile
-FROM node:22-bookworm-slim
-RUN npm install -g n8n@2.1.4
-```
-**Result:** BUILD succeeds, RUNTIME fails with `/usr/bin/env: 'node': No such file or directory`
+**Result:** BUILD succeeds, RUNTIME fails
 
-### 4. Shebang rewrites (#!/usr/bin/env node -> #!/usr/bin/node)
-Attempted to rewrite all shebangs in n8n to use absolute path.
-**Result:** Still fails
+### 4. Shebang rewrites
+**Result:** Failed
 
 ### 5. Symlinks at build time
-```dockerfile
-RUN ln -sf /usr/local/bin/node /usr/bin/node
-```
-**Result:** Symlink exists and verifies during build, fails at runtime on Render
+**Result:** Symlink verified at build, fails at runtime
 
 ### 6. Custom wrapper script as ENTRYPOINT
-Created shell script that sets PATH and calls n8n.
 **Result:** Failed
 
 ### 7. Override ENTRYPOINT to call node directly
-```dockerfile
-ENTRYPOINT ["tini", "--", "/usr/local/bin/node", "/usr/local/lib/node_modules/n8n/bin/n8n"]
-CMD ["worker", "--concurrency=10"]
-```
-**Result:** PENDING - commit 7a2fa98 (Dec 26 2025)
+**Result:** Failed
+
+### 8. Explicit PATH in ENV (CURRENT ATTEMPT)
+**Result:** PENDING
 
 ---
 
-## FAILED dockerCommand Values (in Render dashboard)
-
-All tested with various Dockerfile approaches above:
+## FAILED dockerCommand Values
 
 1. `worker --concurrency=10` - FAILED
 2. `n8n worker --concurrency=10` - FAILED  
 3. `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10` - FAILED
-4. `/usr/local/bin/node /usr/local/lib/node_modules/n8n/packages/cli/bin/n8n.js worker --concurrency=10` - FAILED
+4. `/docker-entrypoint.sh worker --concurrency=10` - FAILED
 5. `tini -- /docker-entrypoint.sh worker --concurrency=10` - FAILED
-6. `tini -- /docker-entrypoint.sh n8n worker --concurrency=10` - FAILED
-7. `/docker-entrypoint.sh worker --concurrency=10` - FAILED
-8. `/bin/sh -c 'export PATH=/usr/local/bin:/usr/bin:$PATH && exec n8n worker --concurrency=10'` - FAILED
-9. `` (empty - rely on Dockerfile CMD) - FAILED
-
----
-
-## Key Observations
-
-1. **Web service works** with same Dockerfile and NO dockerCommand - uses default ENTRYPOINT
-2. **Worker needs** dockerCommand or CMD to pass `worker --concurrency=10` args
-3. **Render's runtime** doesn't have `/usr/local/bin` in PATH when using dockerCommand
-4. **dockerCommand overrides** both ENTRYPOINT and CMD entirely
-5. **Symlinks/PATH changes** made at build time don't persist or apply at Render runtime
-6. **The n8n binary** at `/usr/local/lib/node_modules/n8n/bin/n8n` has shebang `#!/usr/bin/env node`
-
----
-
-## UNTESTED Options
-
-1. **Pin to n8n:2.0.2** - last version before apk-tools removal
-2. **Contact Render support** - ask why runtime environment differs from build
+6. `/bin/sh -c 'export PATH=/usr/local/bin:/usr/bin:$PATH && exec n8n worker --concurrency=10'` - FAILED
+7. (empty - rely on Dockerfile CMD) - FAILED
 
 ---
 
 ## References
 - GitHub Issue: https://github.com/n8n-io/n8n/issues/23246
 - Community Thread: https://community.n8n.io/t/docker-image-is-distroless-cannot-install-git-gh-cli-need-extensible-variant/240490
-- n8n Queue Mode Docs: https://docs.n8n.io/hosting/scaling/queue-mode/
+- Render Support Message: render_support_message.md

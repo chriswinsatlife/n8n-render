@@ -24,6 +24,8 @@ The project has other services on Render, including a Postgres DB and Redis serv
 
 ## Rules of Engagement
 - Never ask the user to push code, make a commit, check GitHub, check Render, deploy on Render, inspect Render logs, etc; you MUST do this yourself in 100% of instances with CLI or API cURL
+- Never ask for details like service IDs, deploy IDs, etc. Look these up on your own.
+- Use the Exa tool to search for context regarding code, build issues, packages, etc.
 
 ## n8n Background Worker Configuration
 - You can see the sole meaningful file in this repo by using `cat ~/GitHub/n8n-background-worker/render.yaml`
