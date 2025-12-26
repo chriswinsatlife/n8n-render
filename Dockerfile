@@ -45,4 +45,6 @@ WORKDIR /home/node
 EXPOSE 5678
 
 USER node
-ENTRYPOINT ["tini", "--", "n8n"]
+# Call the JS entrypoint with an absolute Node path so we don't depend on
+# `/usr/bin/env node` resolution at runtime.
+ENTRYPOINT ["tini", "--", "/usr/local/bin/node", "/usr/local/lib/node_modules/n8n/bin/n8n"]
