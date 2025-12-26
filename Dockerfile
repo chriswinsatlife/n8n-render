@@ -31,4 +31,19 @@ RUN python3 -m venv /opt/venv && \
 
 ENV PATH="/opt/venv/bin:$PATH"
 
+# Create symlink to make /usr/bin/env node work
+RUN ln -sf /usr/local/bin/node /usr/bin/node
+
+# Debug: verify node setup at build time
+RUN echo "=== DEBUG: Build-time node verification ===" && \
+    echo "1. which node:" && which node && \
+    echo "2. /usr/bin/node:" && ls -la /usr/bin/node && \
+    echo "3. /usr/local/bin/node:" && ls -la /usr/local/bin/node && \
+    echo "4. readlink /usr/bin/node:" && readlink -f /usr/bin/node && \
+    echo "5. /usr/bin/env node -v:" && /usr/bin/env node -v && \
+    echo "6. PATH:" && echo $PATH && \
+    echo "7. /usr/bin contents (node related):" && ls -la /usr/bin/ | grep node && \
+    echo "8. /usr/local/bin contents (node related):" && ls -la /usr/local/bin/ | grep node && \
+    echo "=== END DEBUG ==="
+
 USER node
