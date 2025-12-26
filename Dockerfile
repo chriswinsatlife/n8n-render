@@ -16,5 +16,8 @@ RUN ARCH=$(uname -m) && \
 RUN apk add --no-cache pandoc ffmpeg imagemagick poppler-utils ghostscript graphicsmagick python3 py3-pip && \
     pip3 install --no-cache-dir --break-system-packages yt-dlp mobi || true
 
+# Ensure node is findable for scripts using #!/usr/bin/env node
+RUN ln -sf "$(which node)" /usr/bin/node || true
+
 EXPOSE 5678
 USER node
