@@ -16,11 +16,9 @@ RUN ARCH=$(uname -m) && \
 RUN apk add --no-cache pandoc ffmpeg imagemagick poppler-utils ghostscript graphicsmagick python3 py3-pip nodejs && \
     pip3 install --no-cache-dir --break-system-packages yt-dlp mobi || true
 
-# Ensure /usr/bin/node exists for #!/usr/bin/env node shebangs
-RUN ln -sf /usr/local/bin/node /usr/bin/node 2>/dev/null || true
-
-# Ensure PATH includes node location for /usr/bin/env node resolution
-ENV PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:$PATH"
+# Ensure node binary is available (installed via apk at /usr/bin/node)
+# Do not override the binary location; keep default paths intact
+ENV PATH="/usr/bin:/usr/local/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:$PATH"
 
 EXPOSE 5678
 USER node

@@ -11,3 +11,11 @@ The .env file contain examples of lines that can be added manually on Environmen
 To change the webhook URL from localhost to your domain, for example, just add the var WEBHOOK_URL followed by the full URL.
 
 Version 0.224.1
+
+## Changes to Dockerfile from original repo (`eborges-git/n8n-render`):
+- Uses `FROM n8nio/n8n:2.1.4` - Dependabot can update this tag and automatically merge updates
+- Reinstalls `apk-tools` using the workaround from GitHub issue #23246 in `n8n-io/n8n`
+- Installs additional packages: `pandoc ffmpeg imagemagick poppler-utils ghostscript graphicsmagick python3 py3-pip`
+- Installs Python packages: `yt-dlp mobi`
+- Doesn't override `ENTRYPOINT` - uses the official n8n entrypoint
+- Add node symlink for `/usr/bin/env` node scripts with explicit path fallbacks
