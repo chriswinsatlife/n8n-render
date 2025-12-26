@@ -3,6 +3,7 @@
 ## Note
 - These Docker commands are for a different repo (`n8n-background-worker`)
 - The current repo (`n8n-render`), which is the main n8n service, has an empty Docker command in Render
+- The n8n worker needs to receive `worker --concurrency=10` arguments somehow. Without dockerCommand, it would just start as a regular n8n instance, not a worker.
 
 ## URL
 [https://dashboard.render.com/worker/srv-d117ruqdbo4c739o7bhg/settings]

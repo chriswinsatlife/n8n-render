@@ -137,18 +137,22 @@ The dockerCommand `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n w
 
 ## Tested Solutions After Research (2025-12-26)
 
-### Attempt: sh wrapper in dockerCommand
-- **dockerCommand:** `sh -c 'export PATH=/usr/local/bin:$PATH && exec /usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10'`
-- **Result:** PENDING
+### Deploy dep-d57d559r0fns73a36gq0 - FAILED
+- **Commit:** bb53f7e - Rewrite shebangs to use absolute node path
+- **Dockerfile changes:**
+  - `find /usr/local/lib/node_modules -type f -name "*.js" -exec grep -l '#!/usr/bin/env node' {} \; | xargs -r sed -i 's|#!/usr/bin/env node|#!/usr/local/bin/node|g'`
+  - `sed -i 's|#!/usr/bin/env node|#!/usr/local/bin/node|g' /usr/local/lib/node_modules/n8n/bin/n8n`
+  - `ln -sf /usr/local/bin/node /usr/bin/node` (symlink)
+- **dockerCommand:** `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10`
+- **Build:** SUCCESS
+- **Runtime:** FAILED - `/usr/bin/env: 'node': No such file or directory`
+- **Conclusion:** Shebang rewrite + symlink still fails. Symlinks don't persist at Render runtime.
 
-### Attempt: Invoke entrypoint via sh
-- **dockerCommand:** `sh /worker-entrypoint.sh`
-- **Result:** PENDING
-
-### Attempt: Remove dockerCommand entirely
-- **dockerCommand:** (empty - let ENTRYPOINT run)
-- **Dockerfile ENTRYPOINT:** Must start worker, not web UI
-- **Result:** PENDING
+### Deploy PENDING - 230f8c4
+- **Commit:** 230f8c4 - Copy node binary instead of symlink
+- **Dockerfile change:** `cp /usr/local/bin/node /usr/bin/node` (actual copy, not symlink)
+- **dockerCommand:** `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10`
+- **Hypothesis:** If symlinks don't persist, maybe actual file copies will
 
 ---
 

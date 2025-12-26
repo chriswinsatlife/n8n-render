@@ -10,6 +10,8 @@ The project has an associated n8n background worker repo at `chriswinsatlife/n8n
 
 The project has other services on Render, including a Postgres DB and Redis service, listed below.
 
+READ THE FAILURE LOG BEFORE DOING ANYTHING: `FAILURE_LOG.md`.
+
 ## Render Web Services & Docker
 
 - THERE IS LITERALLY NO SUCH THING AS FUCKING CMD ARGS IN RENDER
@@ -22,6 +24,25 @@ The project has other services on Render, including a Postgres DB and Redis serv
 - n8n background worker service on Render fails at runtime with /usr/bin/env: 'node': No such file or directory despite successful Docker builds.
 - n8n 2.1.0+ removed apk-tools from their Alpine image. The community workaround to reinstall apk-tools works for BUILD but fails at RUNTIME on Render specifically.
 - The web service works because it has no dockerCommand - it uses the image's default ENTRYPOINT which properly sets up the environment.
+
+## Editing the n8n Background Worker's Docker Command in Render
+
+The command structure is:
+
+```bash
+curl --request PATCH \
+     --url "https://api.render.com/v1/services/${RENDER_SERVICE_ID}" \
+     --header "accept: application/json" \
+     --header "content-type: application/json" \
+     --header "authorization: Bearer ${RENDER_API_KEY}" \
+     --data '{"serviceDetails": {"envSpecificDetails": {"dockerCommand": "YOUR_NEW_COMMAND"}}}'
+```
+
+If you want to clear the command (set it to empty), you send:
+
+```json
+"dockerCommand": ""
+```
 
 ## Rules of Engagement
 - Never ask the user to push code, make a commit, check GitHub, check Render, deploy on Render, inspect Render logs, etc; you MUST do this yourself in 100% of instances with CLI or API cURL
