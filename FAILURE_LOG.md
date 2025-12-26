@@ -148,11 +148,21 @@ The dockerCommand `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n w
 - **Runtime:** FAILED - `/usr/bin/env: 'node': No such file or directory`
 - **Conclusion:** Shebang rewrite + symlink still fails. Symlinks don't persist at Render runtime.
 
-### Deploy PENDING - 230f8c4
+### Deploy 230f8c4 - FAILED
 - **Commit:** 230f8c4 - Copy node binary instead of symlink
 - **Dockerfile change:** `cp /usr/local/bin/node /usr/bin/node` (actual copy, not symlink)
 - **dockerCommand:** `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10`
-- **Hypothesis:** If symlinks don't persist, maybe actual file copies will
+- **Runtime:** FAILED - `/usr/bin/env: 'node': No such file or directory`
+- **Conclusion:** Even copying the binary to /usr/bin doesn't persist at runtime
+
+### Deploy with sh wrapper - FAILED
+- **dockerCommand:** `/bin/sh -c 'export PATH=/usr/local/bin:/usr/bin:/bin:$PATH && exec /usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10'`
+- **Runtime:** FAILED - `/usr/bin/env: 'node': No such file or directory`
+
+### Env Var Change (2025-12-26)
+- **Change:** Added `EXECUTIONS_PROCESS=worker` environment variable via Render API
+- **Reason:** Render's official n8n guide uses env vars (`EXECUTIONS_MODE=queue` + `EXECUTIONS_PROCESS=worker`) instead of dockerCommand arguments
+- **Status:** PENDING - need to test with empty dockerCommand
 
 ---
 
