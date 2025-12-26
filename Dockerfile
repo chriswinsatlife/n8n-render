@@ -38,7 +38,18 @@ ARG N8N_VERSION=2.1.4
 
 # Install n8n itself.
 RUN set -eux; \
-    npm install -g "n8n@${N8N_VERSION}"
+    npm install -g "n8n@${N8N_VERSION}"; \
+    # Render workers sometimes end up running the `n8n` shim directly.
+    # Force an absolute Node shebang so we never depend on `/usr/bin/env node`.
+    for f in /usr/local/bin/n8n /usr/local/lib/node_modules/n8n/bin/n8n; do \
+        if [ -f "$f" ]; then \
+            tmp="$(mktemp)"; \
+            printf '#!/usr/bin/node\n' > "$tmp"; \
+            tail -n +2 "$f" >> "$tmp"; \
+            mv "$tmp" "$f"; \
+            chmod +x "$f"; \
+        fi; \
+    done
 
 # Persist data to Render disk at /home/node/.n8n
 RUN set -eux; \
