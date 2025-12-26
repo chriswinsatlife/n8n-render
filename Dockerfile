@@ -1,53 +1,49 @@
-FROM n8nio/n8n:2.1.4
+FROM n8nio/n8n:2.1.4 AS n8n
 
-# Switch to root to install packages
+FROM debian:bookworm-slim
+
 USER root
 
-# Install necessary packages (Alpine: apk, Debian/Ubuntu: apt-get)
-RUN set -eux; \
-    if command -v apk >/dev/null 2>&1; then \
-        apk add --no-cache \
-            pandoc \
-            chromium \
-            nss \
-            freetype \
-            harfbuzz \
-            ca-certificates \
-            ttf-freefont \
-            su-exec \
-            ffmpeg \
-            imagemagick \
-            poppler-utils \
-            ghostscript \
-            graphicsmagick \
-            python3 \
-            py3-pip; \
-    elif command -v apt-get >/dev/null 2>&1; then \
-        apt-get update; \
-        apt-get install -y --no-install-recommends \
-            pandoc \
-            chromium \
-            libnss3 \
-            libfreetype6 \
-            libharfbuzz0b \
-            ca-certificates \
-            fonts-freefont-ttf \
-            gosu \
-            ffmpeg \
-            imagemagick \
-            poppler-utils \
-            ghostscript \
-            graphicsmagick \
-            python3 \
-            python3-pip; \
-        rm -rf /var/lib/apt/lists/*; \
-    else \
-        echo "No supported package manager found"; \
-        exit 1; \
-    fi; \
-    python3 -m pip install --no-cache-dir yt-dlp mobi || \
-    python3 -m pip install --no-cache-dir --break-system-packages yt-dlp mobi
+ENV NODE_ENV=production
+ENV NODE_ICU_DATA=/usr/local/lib/node_modules/full-icu
 
+# Install OS-level dependencies. We can't use apk/apt inside the upstream n8n
+# image because it does not include a package manager.
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        pandoc \
+        chromium \
+        ffmpeg \
+        imagemagick \
+        poppler-utils \
+        ghostscript \
+        graphicsmagick \
+        python3 \
+        python3-venv \
+        python3-pip \
+        tini; \
+    rm -rf /var/lib/apt/lists/*
+
+ENV VIRTUAL_ENV=/opt/venv
+RUN set -eux; \
+    python3 -m venv "$VIRTUAL_ENV"; \
+    "$VIRTUAL_ENV/bin/pip" install --no-cache-dir yt-dlp mobi
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# Bring in the exact n8n + Node.js runtime from the official image.
+COPY --from=n8n /usr/local/ /usr/local/
+
+RUN set -eux; \
+    if ! id node >/dev/null 2>&1; then \
+        useradd -m -u 1000 -s /bin/sh node; \
+    fi; \
+    mkdir -p /home/node/.n8n; \
+    chown -R node:node /home/node
+
+WORKDIR /home/node
 EXPOSE 5678
-# Switch back to the default user
+
 USER node
+ENTRYPOINT ["tini", "--", "n8n"]
