@@ -21,4 +21,4 @@ Version 0.224.1
 - Installs additional packages: `pandoc ffmpeg imagemagick poppler-utils ghostscript graphicsmagick python3 py3-pip`
 - Installs Python packages: `yt-dlp mobi`
 - Doesn't override `ENTRYPOINT` - uses the official n8n entrypoint
-- Leaves the bundled `node` binary untouched (no custom symlink)
+- Installs `nodejs` to guarantee `/usr/bin/node` exists and links `/usr/local/bin/node` -> `/usr/bin/node` for `/usr/bin/env node` shebangs

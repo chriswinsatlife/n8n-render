@@ -16,13 +16,12 @@ RUN ARCH=$(uname -m) && \
 RUN apk add --no-cache pandoc ffmpeg imagemagick poppler-utils ghostscript graphicsmagick python3 py3-pip && \
         pip3 install --no-cache-dir --break-system-packages yt-dlp mobi || true
 
-# Ensure node binary exists in both common locations
+# Ensure node binary exists in both common locations (real binary at /usr/bin/node)
 RUN apk add --no-cache --force-overwrite nodejs && \
-        ln -sf /usr/bin/node /usr/local/bin/node && \
-        ln -sf /usr/local/bin/node /usr/bin/node
+        ln -sf /usr/bin/node /usr/local/bin/node
 
 # Verify node is accessible
-RUN which node && node --version && /usr/bin/env node --version
+RUN ls -l /usr/bin/node /usr/local/bin/node && which node && node --version && /usr/bin/env node --version
 
 EXPOSE 5678
 USER node
