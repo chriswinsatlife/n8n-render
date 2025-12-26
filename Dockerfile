@@ -39,15 +39,18 @@ ARG N8N_VERSION=2.1.4
 # Install n8n itself.
 RUN set -eux; \
     npm install -g "n8n@${N8N_VERSION}"; \
-    # Render workers sometimes end up running the `n8n` shim directly.
-    # Force an absolute Node shebang so we never depend on `/usr/bin/env node`.
-    for f in /usr/local/bin/n8n /usr/local/lib/node_modules/n8n/bin/n8n; do \
+    # Render workers sometimes execute Node scripts directly (via shebang).
+    # Make this robust even if PATH is empty/restricted by converting all
+    # `#!/usr/bin/env node` shebangs we install into `#!/usr/bin/node`.
+    ( \
+        grep -rl "^#!/usr/bin/env node" /usr/local/bin /usr/local/lib/node_modules/n8n 2>/dev/null || true; \
+    ) | while IFS= read -r f; do \
         if [ -f "$f" ]; then \
             tmp="$(mktemp)"; \
             printf '#!/usr/bin/node\n' > "$tmp"; \
             tail -n +2 "$f" >> "$tmp"; \
             mv "$tmp" "$f"; \
-            chmod +x "$f"; \
+            chmod 755 "$f"; \
         fi; \
     done
 
