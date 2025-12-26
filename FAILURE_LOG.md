@@ -8,6 +8,18 @@
 ## Current Status
 **DOWN** - All attempts fail at runtime with `/usr/bin/env: 'node': No such file or directory`
 
+### Latest Attempt (2025-12-26)
+- Set service env `PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:/opt/venv/bin`
+- Kept dockerCommand: `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10`
+- Deploy `dep-d57c5nmuk2gs73cvada0` **FAILED**: runtime `/usr/bin/env: 'node': No such file or directory`
+
+### Current Change (2025-12-26)
+- Pinned Dockerfile base to `n8nio/n8n:2.0.2` (pre-apk removal)
+- Service dockerCommand unchanged: `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10`
+- Service PATH env remains overridden as above
+- Render support message drafted at `render_support_message.md`
+- Deploy pending after pin
+
 ---
 
 ## FAILED Dockerfile Approaches

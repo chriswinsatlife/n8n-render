@@ -22,6 +22,13 @@ The project has other services on Render, including a Postgres DB and Redis serv
 - n8n 2.1.0+ removed apk-tools from their Alpine image. The community workaround to reinstall apk-tools works for BUILD but fails at RUNTIME on Render specifically.
 - The web service works because it has no dockerCommand - it uses the image's default ENTRYPOINT which properly sets up the environment.
 
+## Rules of Engagement
+- Never ask the user to push code, make a commit, check GitHub, check Render, deploy on Render, inspect Render logs, etc; you MUST do this yourself in 100% of instances with CLI or API cURL
+
+## n8n Background Worker Configuration
+- You can see the sole meaningful file in this repo by using `cat ~/GitHub/n8n-background-worker/render.yaml`
+- The background worker is primarily configured in Render's web app admin, not the GitHub repo
+
 ## Render CLI
 
 The Render CLI is installed. Use `render --help` for details.
