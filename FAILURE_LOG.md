@@ -163,13 +163,20 @@ The dockerCommand `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n w
 - **Change:** Added `EXECUTIONS_PROCESS=worker` environment variable via Render API
 - **Reason:** Render's official n8n guide uses env vars (`EXECUTIONS_MODE=queue` + `EXECUTIONS_PROCESS=worker`) instead of dockerCommand arguments
 
-### Deploy dep-d57df34hg0os73cq27o0 - PENDING
+### Deploy dep-d57df34hg0os73cq27o0 - FAILED
 - **Commit:** c9a1ee8 - Revert to clean apk-tools workaround for n8n 2.1.4
-- **Dockerfile:** Clean n8n:2.1.4 + apk-tools workaround, NO custom entrypoint, NO symlinks, NO shebang rewrites
-- **dockerCommand:** (empty) - cleared via API
+- **Dockerfile:** Clean n8n:2.1.4 + apk-tools workaround
+- **dockerCommand:** (empty)
+- **Runtime:** FAILED - `/usr/bin/env: 'node': No such file or directory`
+
+### Deploy dep-d57dhu63jp1c73atsfag - FAILED (CRITICAL TEST)
+- **Change:** Switched to official n8n image directly - NO custom Dockerfile
+- **Image:** `docker.io/n8nio/n8n:latest`
+- **Runtime:** `image` (not `docker`)
+- **dockerCommand:** (empty)
 - **Env vars:** `EXECUTIONS_MODE=queue`, `EXECUTIONS_PROCESS=worker`
-- **Strategy:** Let original n8n ENTRYPOINT run, use env vars to control worker mode per Render's official guide
-- **Status:** Building...
+- **Runtime:** FAILED - `/usr/bin/env: 'node': No such file or directory`
+- **CONCLUSION:** Even the official n8n image fails on Render background worker. This proves it's NOT the Dockerfile - it's a Render platform issue.
 
 ---
 
