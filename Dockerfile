@@ -1,40 +1,37 @@
-FROM n8nio/n8n:2.0.2
+FROM n8nio/n8n:2.1.4
 
-# Switch to root to install packages
 USER root
 
-# Install necessary packages using apk (Alpine package manager)
+# Reinstall apk-tools since n8n 2.1.0+ removes it
+# Source: https://community.n8n.io/t/docker-image-is-distroless-cannot-install-git-gh-cli-need-extensible-variant/240490
+RUN ARCH=$(uname -m) && \
+    wget -qO- "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/" | \
+    grep -o 'href="apk-tools-static-[^"]*\.apk"' | head -1 | cut -d'"' -f2 | \
+    xargs -I {} wget -q "http://dl-cdn.alpinelinux.org/alpine/latest-stable/main/${ARCH}/{}" && \
+    tar -xzf apk-tools-static-*.apk && \
+    ./sbin/apk.static -X http://dl-cdn.alpinelinux.org/alpine/latest-stable/main \
+        -U --allow-untrusted add apk-tools && \
+    rm -rf sbin apk-tools-static-*.apk
+
+# Now apk works - install our dependencies
 RUN apk add --no-cache \
-    pandoc \
     chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont \
-    su-exec \
     ffmpeg \
     imagemagick \
     poppler-utils \
     ghostscript \
     graphicsmagick \
-    yt-dlp || \
-    pip install --no-cache-dir yt-dlp \
-    pip install --no-cache-dir mobi
+    pandoc \
+    python3 \
+    py3-pip
 
-# Rewrite shebang in n8n binary to avoid /usr/bin/env node lookup
-RUN find /usr/local/lib/node_modules -type f -name "*.js" -exec grep -l '#!/usr/bin/env node' {} \; | xargs -r sed -i 's|#!/usr/bin/env node|#!/usr/local/bin/node|g'
-RUN sed -i 's|#!/usr/bin/env node|#!/usr/local/bin/node|g' /usr/local/lib/node_modules/n8n/bin/n8n || true
+# Install Python packages
+RUN python3 -m venv /opt/venv && \
+    /opt/venv/bin/pip install --no-cache-dir yt-dlp mobi
 
-# Copy node binary to /usr/bin (not symlink - Render may not preserve symlinks)
-RUN cp /usr/local/bin/node /usr/bin/node
-
-# Copy worker entrypoint
-COPY worker-entrypoint.sh /worker-entrypoint.sh
-RUN chmod +x /worker-entrypoint.sh && chown node:node /worker-entrypoint.sh
+ENV PATH="/opt/venv/bin:$PATH"
 
 USER node
-ENTRYPOINT ["/worker-entrypoint.sh"]
 
-# Switch back to the default user
-USER node
+# Keep the original ENTRYPOINT from n8n image: ["tini", "--", "/docker-entrypoint.sh"]
+# This passes any CMD/args to n8n, so "worker --concurrency=10" becomes "n8n worker --concurrency=10"
