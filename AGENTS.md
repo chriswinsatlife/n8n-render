@@ -1,5 +1,7 @@
 # Render API Agent Instructions
 
+## YOU MUST UPDATE `FAILURE_LOG.md` AFTER EVERY SINGLE CHANGE TO ANY CODE FILE IN THE REPO, EVERY SINGLE RENDER DEPLOYMENT, EVERY SINGLE CHANGE TO RENDER CONFIGURATION E.G. DOCKER COMMAND, ETC. NO EXCEPTIONS.
+
 ## Context
 
 This repository is for managing the primary front-end web service of a self-hosted n8n instance on Render. 
@@ -122,3 +124,5 @@ curl --request GET \
      --header "accept: application/json" \
      --header "authorization: Bearer ${RENDER_API_KEY}"
 ```
+
+## YOU MUST UPDATE `FAILURE_LOG.md` AFTER EVERY SINGLE CHANGE TO ANY CODE FILE IN THE REPO, EVERY SINGLE RENDER DEPLOYMENT, EVERY SINGLE CHANGE TO RENDER CONFIGURATION E.G. DOCKER COMMAND, ETC. NO EXCEPTIONS.

@@ -24,3 +24,4 @@ Optionally override your Dockerfile's CMD and ENTRYPOINT instructions with a dif
 - `worker --concurrency=10`
 - `tini -- /docker-entrypoint.sh n8n worker --concurrency=10`
 - `/usr/local/bin/node /usr/local/lib/node_modules/n8n/packages/cli/bin/n8n.js worker --concurrency=10`
+- `` (blank)
