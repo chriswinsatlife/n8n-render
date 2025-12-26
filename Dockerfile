@@ -27,6 +27,7 @@ COPY worker-entrypoint.sh /worker-entrypoint.sh
 RUN chmod +x /worker-entrypoint.sh
 RUN ln -s /usr/local/bin/node /usr/bin/node
 
-EXPOSE 5678
+ENTRYPOINT ["/worker-entrypoint.sh"]
+
 # Switch back to the default user
 USER node
