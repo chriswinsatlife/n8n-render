@@ -23,11 +23,13 @@
 - **Runtime:** FAILED - `/usr/bin/env: 'node': No such file or directory`
 - **Conclusion:** Symlinks created at build time do NOT persist at Render runtime
 
-### Deploy PENDING - e66256c
-- **Commit:** e66256c - Explicitly set PATH in ENV to persist at runtime
+### Deploy dep-d57cgqpr0fns73a30gmg - FAILED
+- **Commit:** Explicitly set PATH in ENV to persist at runtime
 - **Change:** `ENV PATH="/usr/local/bin:/usr/bin:/bin:/opt/venv/bin:$PATH"`
 - **dockerCommand:** `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n worker --concurrency=10`
-- **Status:** Waiting for deploy
+- **Build:** SUCCESS - Debug shows symlink exists, `/usr/bin/env node` works
+- **Runtime:** FAILED - `/usr/bin/env: 'node': No such file or directory`
+- **Conclusion:** Explicit ENV PATH also doesn't help
 
 ---
 
@@ -65,8 +67,8 @@ Research (Exa) found that Render's `dockerCommand` bypasses the image ENTRYPOINT
 ### 7. Override ENTRYPOINT to call node directly
 **Result:** Failed
 
-### 8. Explicit PATH in ENV (CURRENT ATTEMPT)
-**Result:** PENDING
+### 8. Explicit PATH in ENV
+**Result:** FAILED - same runtime error
 
 ---
 
