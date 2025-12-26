@@ -34,4 +34,5 @@ ENV PATH="/opt/venv/bin:$PATH"
 USER node
 
 # Keep the original ENTRYPOINT from n8n image: ["tini", "--", "/docker-entrypoint.sh"]
-# This passes any CMD/args to n8n, so "worker --concurrency=10" becomes "n8n worker --concurrency=10"
+# CMD is passed to entrypoint, which does: exec n8n "$@"
+CMD ["worker", "--concurrency=10"]
