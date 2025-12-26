@@ -8,6 +8,18 @@ The project has an associated n8n background worker repo at `chriswinsatlife/n8n
 
 The project has other services on Render, including a Postgres DB and Redis service, listed below.
 
+## Render Web Services & Docker
+
+- THERE IS LITERALLY NO SUCH THING AS FUCKING CMD ARGS IN RENDER
+- THERE IS DOCKERFILE PATH, DOCKER BUILD CONTEXT DIRECTORY, DOCKER COMMAND, PRE-DEPLOY COMMAND, AND THAT'S FUCKING IT
+
+## Notes
+- The Render background worker has a Docker command field filled; it has changed many times
+- The Render background worker repo has no Dockerfile; it simply references the Dockerfile in this `n8n-render` repo
+- n8n background worker service on Render fails at runtime with /usr/bin/env: 'node': No such file or directory despite successful Docker builds.
+- n8n 2.1.0+ removed apk-tools from their Alpine image. The community workaround to reinstall apk-tools works for BUILD but fails at RUNTIME on Render specifically.
+- The web service works because it has no dockerCommand - it uses the image's default ENTRYPOINT which properly sets up the environment.
+
 ## Render CLI
 
 The Render CLI is installed. Use `render --help` for details.
