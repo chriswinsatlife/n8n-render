@@ -17,8 +17,10 @@ RUN apk add --no-cache pandoc ffmpeg imagemagick poppler-utils ghostscript graph
     pip3 install --no-cache-dir --break-system-packages yt-dlp mobi || true
 
 # Ensure /usr/bin/node exists for #!/usr/bin/env node shebangs
-RUN ln -sf /usr/local/bin/node /usr/bin/node 2>/dev/null || \
-    ln -sf /usr/bin/node /usr/bin/node 2>/dev/null || true
+RUN ln -sf /usr/local/bin/node /usr/bin/node 2>/dev/null || true
+
+# Ensure PATH includes node location for /usr/bin/env node resolution
+ENV PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:$PATH"
 
 EXPOSE 5678
 USER node
