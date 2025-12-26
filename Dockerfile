@@ -16,11 +16,15 @@ RUN ARCH=$(uname -m) && \
 RUN apk add --no-cache pandoc ffmpeg imagemagick poppler-utils ghostscript graphicsmagick python3 py3-pip && \
     pip3 install --no-cache-dir --break-system-packages yt-dlp mobi || true
 
-# Ensure node is findable for scripts using #!/usr/bin/env node
-# In Alpine node images, node is at /usr/local/bin/node
-RUN ln -sf /usr/local/bin/node /usr/bin/node 2>/dev/null || \
-    ln -sf /usr/bin/node /usr/bin/node 2>/dev/null || \
-    (find / -name "node" -type f 2>/dev/null | head -1 | xargs -I {} ln -sf {} /usr/bin/node) || true
+# Debug: find where node is and create symlink
+RUN echo "=== Finding node ===" && \
+    which node || echo "which node failed" && \
+    ls -la /usr/local/bin/node 2>/dev/null || echo "not at /usr/local/bin/node" && \
+    ls -la /usr/bin/node 2>/dev/null || echo "not at /usr/bin/node" && \
+    find / -name "node" -type f 2>/dev/null || echo "find failed" && \
+    echo "=== Creating symlink ===" && \
+    ln -sf /usr/local/bin/node /usr/bin/node && \
+    ls -la /usr/bin/node
 
 EXPOSE 5678
 USER node
