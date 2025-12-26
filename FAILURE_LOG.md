@@ -252,6 +252,41 @@ The dockerCommand `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n w
 
 ---
 
+## Custom Packages - Not Yet Deployed (2025-12-26)
+
+The worker is running with the official n8n image, which lacks custom packages:
+- ffmpeg, imagemagick, poppler-utils, ghostscript, graphicsmagick, pandoc
+- python3, yt-dlp, mobi
+
+### Dockerfile Ready
+A Dockerfile with these packages exists at `/Dockerfile`:
+- Base: `n8nio/n8n:latest`
+- Includes apk-tools workaround
+- Has `CMD ["worker", "--concurrency=10"]` baked in
+- Chromium excluded (too large - 1GB)
+
+### Why Not Deployed Yet
+1. **Cannot switch runtime via API** - Render won't let us change from `image` to `docker` runtime via API
+2. **Docker Hub push timed out** - The ~480MB packages layer kept failing to upload
+3. **ghcr.io token lacks scope** - Would need `write:packages` permission
+
+### To Deploy Custom Image
+**Option A: Push to Docker Hub (retry when network is better)**
+```bash
+docker build -t chriswinsatlife/n8n-custom:latest .
+docker push chriswinsatlife/n8n-custom:latest
+# Then update imagePath via API
+```
+
+**Option B: Recreate worker service**
+1. Delete current worker service
+2. Create new one with `runtime: docker`
+3. Connect to repo `chriswinsatlife/n8n-render`
+4. Leave Docker Command empty (CMD in Dockerfile)
+5. Re-add all env vars and disk mount
+
+---
+
 ## References
 - GitHub Issue: https://github.com/n8n-io/n8n/issues/23246
 - Community Thread: https://community.n8n.io/t/docker-image-is-distroless-cannot-install-git-gh-cli-need-extensible-variant/240490
