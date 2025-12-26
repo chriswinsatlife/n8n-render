@@ -33,6 +33,6 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 USER node
 
-# Keep the original ENTRYPOINT from n8n image: ["tini", "--", "/docker-entrypoint.sh"]
-# CMD is passed to entrypoint, which does: exec n8n "$@"
+# Override ENTRYPOINT to call node directly - bypasses shebang issues
+ENTRYPOINT ["tini", "--", "/usr/local/bin/node", "/usr/local/lib/node_modules/n8n/bin/n8n"]
 CMD ["worker", "--concurrency=10"]
