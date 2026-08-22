@@ -340,4 +340,5 @@ This section is archived and intentionally contains no executable deployment pro
 - If the worker differs, the coordinator updates the worker image setting and triggers an explicit Render API deployment. If both services already match, it does not restart the worker.
 - The coordinator runs after Dockerfile updates, weekly at 02:00 UTC / 10:00 WITA, and by manual dispatch. A failed run is retried by the next weekly run.
 - The coordinator requires the encrypted GitHub repository secret `RENDER_API_KEY`; the credential is not stored in this repository or written to logs.
+- Manual verification run `32550279517` completed successfully at 2026-08-22 11:55:10 WITA. It read n8n `2.35.7`, found the matching web deployment live, passed the public health check, confirmed the worker image matched, and correctly skipped a worker restart.
 - No Render service plan, disk, database, Redis resource, command, or environment value was changed by this repository update.
