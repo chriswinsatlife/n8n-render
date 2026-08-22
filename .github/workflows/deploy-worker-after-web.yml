@@ -1,0 +1,220 @@
+name: Coordinate n8n Services
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - Dockerfile
+  schedule:
+    - cron: '0 2 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: n8n-production-update
+  cancel-in-progress: false
+
+env:
+  RENDER_API_BASE: https://api.render.com/v1
+  WEB_SERVICE_ID: srv-cmr5odgl5elc73ahtm40
+  WORKER_SERVICE_ID: srv-d117ruqdbo4c739o7bhg
+  WEB_HEALTH_URL: https://n8n-naps.onrender.com/healthz
+
+jobs:
+  coordinate-services:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Read pinned n8n image
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          dockerfile_url="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/${GITHUB_SHA}/Dockerfile"
+          image_ref="$(curl --fail --silent --show-error "$dockerfile_url" | awk '
+            $1 == "FROM" {
+              for (i = 2; i <= NF; i++) {
+                if ($i ~ /^n8nio\/n8n:/) {
+                  print $i
+                  exit
+                }
+              }
+            }
+          ')"
+
+          if [[ ! "$image_ref" =~ ^n8nio/n8n:[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Dockerfile must pin a stable n8nio/n8n semantic version; found: ${image_ref:-missing}" >&2
+            exit 1
+          fi
+
+          image_url="docker.io/${image_ref}"
+          echo "image_url=$image_url" >> "$GITHUB_OUTPUT"
+          echo "Using $image_url"
+
+      - name: Wait for web service deploy
+        shell: bash
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${RENDER_API_KEY:-}" ]]; then
+            echo 'Missing repository secret RENDER_API_KEY.' >&2
+            exit 1
+          fi
+
+          for attempt in $(seq 1 60); do
+            deploy_json="$(curl --fail --silent --show-error \
+              --header "Authorization: Bearer $RENDER_API_KEY" \
+              --header 'Accept: application/json' \
+              "$RENDER_API_BASE/services/$WEB_SERVICE_ID/deploys?limit=20")"
+
+            state="$(jq -r --arg commit "$GITHUB_SHA" '
+              [.[] | .deploy | select(.commit.id == $commit) | .status] | first // "not_found"
+            ' <<< "$deploy_json")"
+
+            echo "Web deploy state: $state (attempt $attempt/60)"
+            case "$state" in
+              live)
+                break
+                ;;
+              build_failed|canceled|deactivated|cancelled)
+                echo "Web deploy failed: $state" >&2
+                exit 1
+                ;;
+            esac
+
+            if [[ "$attempt" == 60 ]]; then
+              echo 'Timed out waiting for the web service deploy.' >&2
+              exit 1
+            fi
+            sleep 10
+          done
+
+          curl --fail --silent --show-error --retry 6 --retry-all-errors --retry-delay 10 "$WEB_HEALTH_URL"
+
+      - name: Check worker deployment
+        id: worker_check
+        shell: bash
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          IMAGE_URL: ${{ steps.image.outputs.image_url }}
+        run: |
+          set -euo pipefail
+
+          service_json="$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $RENDER_API_KEY" \
+            --header 'Accept: application/json' \
+            "$RENDER_API_BASE/services/$WORKER_SERVICE_ID")"
+          deploy_json="$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer $RENDER_API_KEY" \
+            --header 'Accept: application/json' \
+            "$RENDER_API_BASE/services/$WORKER_SERVICE_ID/deploys?limit=20")"
+
+          configured_image="$(jq -r '.imagePath // ""' <<< "$service_json")"
+          live_image="$(jq -r '
+            [.[] | .deploy | select(.status == "live") | .image.ref] | first // ""
+          ' <<< "$deploy_json")"
+
+          if [[ "$configured_image" == "$IMAGE_URL" && "$live_image" == "$IMAGE_URL" ]]; then
+            echo 'needs_deploy=false' >> "$GITHUB_OUTPUT"
+            echo "Worker already runs $IMAGE_URL"
+          else
+            echo 'needs_deploy=true' >> "$GITHUB_OUTPUT"
+            echo "Worker reconciliation required; configured=$configured_image live=$live_image target=$IMAGE_URL"
+          fi
+
+      - name: Update worker image setting
+        id: worker_setting
+        if: steps.worker_check.outputs.needs_deploy == 'true'
+        shell: bash
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          IMAGE_URL: ${{ steps.image.outputs.image_url }}
+        run: |
+          set -euo pipefail
+
+          payload="$(jq -cn --arg image "$IMAGE_URL" '{image: {name: $image}}')"
+          curl --fail --silent --show-error --request PATCH \
+            --header "Authorization: Bearer $RENDER_API_KEY" \
+            --header 'Accept: application/json' \
+            --header 'Content-Type: application/json' \
+            --data "$payload" \
+            "$RENDER_API_BASE/services/$WORKER_SERVICE_ID" >/dev/null
+
+          echo "Worker image setting updated to $IMAGE_URL"
+
+      - name: Deploy worker image
+        id: worker_deploy
+        if: steps.worker_check.outputs.needs_deploy == 'true'
+        shell: bash
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          IMAGE_URL: ${{ steps.image.outputs.image_url }}
+        run: |
+          set -euo pipefail
+
+          response="$(curl --fail --silent --show-error --request POST \
+            --header "Authorization: Bearer $RENDER_API_KEY" \
+            --header 'Accept: application/json' \
+            --header 'Content-Type: application/json' \
+            --data "$(jq -cn --arg image "$IMAGE_URL" '{imageUrl: $image}')" \
+            "$RENDER_API_BASE/services/$WORKER_SERVICE_ID/deploys")"
+
+          deploy_id="$(jq -r '.deploy.id // .id // empty' <<< "$response")"
+          if [[ -z "$deploy_id" ]]; then
+            echo 'Render did not return a worker deploy ID.' >&2
+            exit 1
+          fi
+          echo "deploy_id=$deploy_id" >> "$GITHUB_OUTPUT"
+          echo "Worker deploy started: $deploy_id"
+
+      - name: Wait for worker deploy
+        if: steps.worker_check.outputs.needs_deploy == 'true'
+        shell: bash
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          IMAGE_URL: ${{ steps.image.outputs.image_url }}
+          WORKER_DEPLOY_ID: ${{ steps.worker_deploy.outputs.deploy_id }}
+        run: |
+          set -euo pipefail
+
+          for attempt in $(seq 1 60); do
+            deploy_json="$(curl --fail --silent --show-error \
+              --header "Authorization: Bearer $RENDER_API_KEY" \
+              --header 'Accept: application/json' \
+              "$RENDER_API_BASE/services/$WORKER_SERVICE_ID/deploys?limit=20")"
+
+            state="$(jq -r --arg deploy_id "$WORKER_DEPLOY_ID" '
+              [.[] | .deploy | select(.id == $deploy_id) | .status] | first // "not_found"
+            ' <<< "$deploy_json")"
+
+            echo "Worker deploy state: $state (attempt $attempt/60)"
+            case "$state" in
+              live)
+                live_image="$(jq -r --arg deploy_id "$WORKER_DEPLOY_ID" '
+                  [.[] | .deploy | select(.id == $deploy_id) | .image.ref] | first // ""
+                ' <<< "$deploy_json")"
+                if [[ "$live_image" != "$IMAGE_URL" ]]; then
+                  echo "Worker deployed image mismatch: $live_image" >&2
+                  exit 1
+                fi
+                exit 0
+                ;;
+              build_failed|canceled|deactivated|cancelled)
+                echo "Worker deploy failed: $state" >&2
+                exit 1
+                ;;
+            esac
+
+            if [[ "$attempt" == 60 ]]; then
+              echo 'Timed out waiting for the worker deploy.' >&2
+              exit 1
+            fi
+            sleep 10
+          done

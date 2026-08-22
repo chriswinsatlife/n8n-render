@@ -39,7 +39,7 @@ This document records the live Render configuration and the commands used to ver
 - Persistent disk: 5 GB at `/home/node`
 - Public Render URL: `https://n8n-naps.onrender.com`
 - Render auto-deploy setting: commit
-- Last observed live deploy: `dep-da4h9t5ckfvc73ciu1e0`, new commit, 2026-08-22 11:18:33 WITA
+- Last observed live deploy: `dep-da4he53l550s73b1fd3g`, new commit, 2026-08-22 11:27:28 WITA
 
 The current repository Dockerfile contains `FROM n8nio/n8n:2.35.7`. A GitHub commit is required before this Git-backed Render service rebuilds and deploys.
 
@@ -57,11 +57,10 @@ The current repository Dockerfile contains `FROM n8nio/n8n:2.35.7`. A GitHub com
 - Render API auto-deploy field: commit
 - Last observed live deploy: `dep-da4hbl8n74is73dl14hg`, API, 2026-08-22 11:21:59 WITA
 - Last observed image digest: `sha256:f410270e715c795b4935eb16f94c099f7aee8da81c340c9842e76f0d5e716ff3`
-- Last observed image digest: `sha256:00220887605660bbd1aa79ff63b4761759d875fc27bcf013dc754bc3b7f6215c`
 
 The worker has no linked Git repository. Render documents that image-backed services do not automatically redeploy when a registry tag such as `latest` changes. A manual deploy, deploy hook, or API trigger is required to pull a newer image. The `autoDeploy` and `autoDeployTrigger` fields must not be interpreted as a Docker Hub tag watcher.
 
-No local GitHub Action, LaunchAgent, or n8n workflow referencing this worker’s Render service ID or deploy hook was found during the 2026-08-22 inspection.
+The repository now contains a GitHub Actions coordinator for this worker. It uses the Render API after the matching web deployment is live and healthy, and runs weekly as a retry and reconciliation check. It requires the encrypted repository secret `RENDER_API_KEY`.
 
 ### Database
 
@@ -87,19 +86,22 @@ No local GitHub Action, LaunchAgent, or n8n workflow referencing this worker’s
 
 ### Web Service Path
 
-- Dependabot checks the Docker base image monthly, according to `.github/dependabot.yml`.
-- The current Dependabot configuration checks monthly and allows minor and patch version updates.
+- Dependabot checks the Docker base image weekly, according to `.github/dependabot.yml`.
+- The current Dependabot configuration checks weekly and allows minor and patch version updates.
 - `.github/workflows/auto-merge.yml` asks GitHub to auto-merge Dependabot pull requests. GitHub still applies required checks and branch protection rules.
 - After a merged commit reaches `main`, Render’s Git-backed web service is configured to auto-deploy that commit.
+- `.github/workflows/deploy-worker-after-web.yml` waits for the same web commit to be live and healthy, compares the worker’s configured and latest live image references, and updates/deploys the worker only when reconciliation is needed.
+- The coordinator runs weekly at 02:00 UTC, which is 10:00 WITA, and also runs after a Dockerfile update reaches `main` or when manually dispatched. Its concurrency lock prevents overlapping production updates.
 
-This is a configured monthly check and auto-merge path for the web service. The latest observed Dependabot pull request and auto-merge run were both on 2025-12-24. No 2026 Dependabot pull request or auto-merge run was found in the audit. The 2026-08-10 web deploy was triggered by a new commit containing the Dependabot-throttling configuration; it was not an n8n version update and was not attributed to Dependabot. It is not an automatic Docker Hub image-refresh path for the worker.
+This is a configured weekly check and auto-merge path for the web service, followed by the GitHub Actions worker coordinator. The coordinator is the current temporary solution; a Render Cron Job can be evaluated later, but it is not part of the current deployment path.
 
 GitHub reports automated security fixes enabled and no open Dependabot alerts at the audit timestamp. This confirms repository security-update settings, not that n8n image vulnerabilities are completely covered.
 
 ### Worker Path
 
 - The worker remains on the image digest from its last successful deploy until another deploy is triggered.
-- A Render Dashboard manual deploy, Render CLI deploy, deploy hook, or Render API trigger can pull the current tag or a specified tag/digest.
+- The coordinator supplies the pinned image reference and uses the Render API to update the worker image setting and trigger a deploy when the web and worker are not already aligned.
+- A Render Dashboard manual deploy, Render CLI deploy, deploy hook, or Render API trigger remains available for emergency recovery.
 - Do not update the worker independently from the main service. Queue mode uses the main process, worker, Redis, database, and shared encryption key as one system.
 
 ### Disconnected Duplicate Blueprint
@@ -114,6 +116,17 @@ GitHub reports automated security fixes enabled and no open Dependabot alerts at
 - Record the old and new image references and digests before and after the deploy.
 - Verify the web health endpoint, recent web logs, recent worker logs, and one real workflow execution.
 - Update this document’s timestamp and `FAILURE_LOG.md` after the live state changes.
+
+### GitHub Actions Coordinator
+
+- Dependabot proposes Dockerfile image updates weekly.
+- The Dependabot workflow requests automatic merging. GitHub’s required checks and repository settings decide whether the pull request can merge.
+- Render deploys the web service when the merged commit reaches `main`.
+- The coordinator waits for that exact web commit to be live and healthy before touching the worker.
+- The coordinator reads the pinned image from the repository Dockerfile, never from the mutable `latest` tag.
+- It compares the worker’s configured image and latest live worker image to the pinned target. Matching services are left running.
+- When they differ, it updates the worker image setting, triggers an explicit Render API deploy, and waits for the target image reference to be live.
+- A failed run leaves the services in their last state and is retried by the next weekly scheduled run. GitHub Actions runner availability or usage limits can still prevent a run; no paid Actions usage is authorized.
 
 ## Read-Only Inspection
 

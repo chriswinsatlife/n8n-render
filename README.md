@@ -24,22 +24,21 @@ No active Render Blueprint is connected to this repository. The duplicate `n8n-n
 
 The web service follows this path:
 
-- Dependabot checks the pinned `n8nio/n8n:2.35.7` Docker base image monthly.
+- Dependabot checks the pinned `n8nio/n8n:2.35.7` Docker base image weekly.
 - Dependabot can propose minor and patch updates.
 - The repository workflow enables automatic merging for Dependabot pull requests.
 - Render automatically deploys the web service after the merged GitHub commit.
+- `.github/workflows/deploy-worker-after-web.yml` waits for that web deployment to be live and healthy, then reconciles the worker to the same pinned image through the Render API.
+- The coordinator also runs weekly, so a failed worker update is retried at the next scheduled run. It does not redeploy the worker when the configured image and latest live worker image already match.
 
-The worker does not follow Docker Hub tag updates automatically. Render’s image-backed service requires a manual deploy or an explicit deploy-hook/API call to pull the current `latest` image. No local scheduled updater for this worker was found.
-
-The web service has a configured monthly Dependabot check and GitHub auto-merge path. The latest observed Dependabot pull request and auto-merge run were on 2025-12-24; no 2026 run was found in the 2026-08-22 audit. It does not automatically pull a new Docker Hub image into the worker.
-
-Before any worker update, record the currently running image digest, confirm that the web service is healthy, and update the worker only after a separate deployment decision.
+Render’s image-backed worker does not follow Docker Hub tag updates by itself. The GitHub coordinator supplies the explicit image setting and deploy request only after the web service for the same repository commit is live and healthy. The encrypted GitHub repository secret `RENDER_API_KEY` is required for that coordinator.
 
 ## Local Files
 
 - `Dockerfile` is the web service’s current base-image declaration.
-- `.github/dependabot.yml` controls the web-service image update cadence.
+- `.github/dependabot.yml` controls the weekly web-service image update cadence.
 - `.github/workflows/auto-merge.yml` handles Dependabot pull requests.
+- `.github/workflows/deploy-worker-after-web.yml` keeps the Render web service and worker on the same pinned n8n version.
 - `render.yaml` is an empty historical Blueprint placeholder and must not be applied to the existing project.
 - `render_queue_mode.yaml` is a historical queue-mode draft and must not be applied to the existing project.
 - `FAILURE_LOG.md` records operational history and must be updated when this repository’s deployment configuration is edited.

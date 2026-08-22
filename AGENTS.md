@@ -24,20 +24,22 @@ The main service and worker are one queue-mode system. They must continue to sha
 
 ### Web Service
 
-- `.github/dependabot.yml` checks the Docker base image monthly.
-- The current configuration checks monthly and allows minor and patch version updates to be proposed.
+- `.github/dependabot.yml` checks the Docker base image weekly.
+- The current configuration checks weekly and allows minor and patch version updates to be proposed.
 - `.github/workflows/auto-merge.yml` requests automatic merging for Dependabot pull requests. Required checks and branch protection still control whether GitHub merges them.
 - Render’s Git-backed web service is configured to deploy after a merged commit reaches `main`.
+- `.github/workflows/deploy-worker-after-web.yml` waits for the matching web deployment to be live and healthy, then reconciles the worker through the Render API.
 - The duplicate Render Blueprint `n8n-new` was disconnected on 2026-08-22 because it had zero managed resources and was syncing the stale historical Blueprint file.
 
-This is the configured monthly check and auto-merge path for the web service. The latest observed Dependabot pull request and auto-merge run were on 2025-12-24; no 2026 run was found in the 2026-08-22 audit. Confirm actual Dependabot runs and resulting Render deploys instead of assuming the schedule has executed.
+This is the configured weekly check and auto-merge path for the web service. Confirm actual Dependabot runs, the resulting Render web deploy, and the coordinator run instead of assuming the schedule has executed.
 
 ### Background Worker
 
 - The worker currently uses `docker.io/n8nio/n8n:2.35.7`.
 - Render’s image-backed services do not automatically redeploy when a registry tag changes. The worker requires a manual deploy, deploy hook, or API trigger to pull a newer image.
 - The Render API may show `autoDeploy: yes` and `autoDeployTrigger: commit` for the worker. Because the worker has no linked repository and uses a prebuilt image, those fields are not a Docker Hub tag watcher.
-- No local GitHub Action, LaunchAgent, or n8n workflow referencing the worker service ID or deploy hook was found during the 2026-08-22 inspection.
+- `.github/workflows/deploy-worker-after-web.yml` is the approved GitHub Actions coordinator. It updates the worker only after the matching web deployment is live and healthy, and retries weekly if a prior run fails.
+- The coordinator requires the encrypted GitHub repository secret `RENDER_API_KEY`. Never put the key in this repository or in workflow output.
 
 GitHub reported automated security fixes enabled and no open Dependabot alerts during the 2026-08-22 audit.
 
@@ -68,8 +70,9 @@ Do not save or publish environment variables, API responses containing secrets, 
 ## Repository Map
 
 - `Dockerfile`: base image declaration used by the main web service.
-- `.github/dependabot.yml`: monthly Docker image update schedule and version-update policy.
+- `.github/dependabot.yml`: weekly Docker image update schedule and version-update policy.
 - `.github/workflows/auto-merge.yml`: Dependabot pull-request auto-merge workflow.
+- `.github/workflows/deploy-worker-after-web.yml`: weekly and post-Dockerfile-merge coordinator for the web service and worker.
 - `docs/render_operations.md`: canonical live-state snapshot and inspection procedure.
 - `render.yaml`: empty historical Blueprint placeholder; do not apply.
 - `render_queue_mode.yaml`: historical queue-mode Blueprint draft; do not apply.

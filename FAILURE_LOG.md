@@ -331,3 +331,13 @@ This section is archived and intentionally contains no executable deployment pro
 - Replaced the historical resource definitions with empty `services` and `databases` lists. This prevents stale Blueprint configuration from being applied and does not alter the live CYHQ n8n resources.
 - Local Render CLI validation passed for the replacement placeholder. The repository must be published so the linked Blueprint can re-read the valid file.
 - The duplicate zero-resource Blueprint `n8n-new` (`exs-cmr5n1n109ks73fg75k0`) was disconnected at 2026-08-22 11:26:58 WITA. Render returned HTTP 204, and no services or datastores were deleted.
+
+## GitHub Actions Service Coordinator 2026-08-22
+
+- Changed Dependabot from monthly to weekly Docker image checks while retaining minor and patch updates.
+- Added `.github/workflows/deploy-worker-after-web.yml` for the temporary GitHub Actions deployment path requested for the grandfathered Render project.
+- The coordinator reads the pinned n8n version from `Dockerfile`, waits for the matching Render web deployment to be live and healthy, then checks the worker’s configured and latest live image references.
+- If the worker differs, the coordinator updates the worker image setting and triggers an explicit Render API deployment. If both services already match, it does not restart the worker.
+- The coordinator runs after Dockerfile updates, weekly at 02:00 UTC / 10:00 WITA, and by manual dispatch. A failed run is retried by the next weekly run.
+- The coordinator requires the encrypted GitHub repository secret `RENDER_API_KEY`; the credential is not stored in this repository or written to logs.
+- No Render service plan, disk, database, Redis resource, command, or environment value was changed by this repository update.
