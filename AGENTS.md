@@ -1,171 +1,85 @@
-# Render API Agent Instructions
+# Render Operations Instructions
 
-## YOU MUST UPDATE `FAILURE_LOG.md` AFTER EVERY SINGLE CHANGE TO ANY CODE FILE IN THE REPO, EVERY SINGLE RENDER DEPLOYMENT, EVERY SINGLE CHANGE TO RENDER CONFIGURATION E.G. DOCKER COMMAND, ETC. NO EXCEPTIONS.
+Read `FAILURE_LOG.md` and `docs/render_operations.md` before inspecting or changing this repository. The operations document contains the last verified live Render snapshot, its WITA timestamp, the authority order, and read-only inspection commands.
 
-## Context
+## Source of Truth
 
-This repository is for managing the primary front-end web service of a self-hosted n8n instance on Render. 
+- Live Render API and Dashboard are authoritative for service type, plans, resource IDs, environment values, disks, commands, image references, and deployed image digests.
+- GitHub `main` is authoritative for the web service Dockerfile and GitHub Actions workflows.
+- Local documentation is explanatory and becomes stale after a live deployment, Render configuration change, GitHub workflow change, or image update.
+- `render.yaml` and `render_queue_mode.yaml` in this repository are historical, non-authoritative Blueprints. Never apply them to the existing grandfathered project.
+- `~/github/n8n-background-worker/render.yaml` is a historical export describing three Docker workers. The live project has one image-backed worker.
 
-The project has an associated n8n background worker repo at `chriswinsatlife/n8n-background-worker`.
+## Live Service Roles
 
-The project has other services on Render, including a Postgres DB and Redis service, listed below.
+- `n8n` is the main web service. It serves the UI, API, and triggers, and is built from this repository’s `Dockerfile`.
+- `n8n-background-worker-1` is the execution worker. It is a Render image-backed background worker running `n8n worker --concurrency=10`.
+- PostgreSQL stores n8n state and execution data.
+- Redis carries the queue between the main process and worker.
 
-READ THE FAILURE LOG BEFORE DOING ANYTHING: `FAILURE_LOG.md`.
+The main service and worker are one queue-mode system. They must continue to share the database, Redis, and main instance encryption key. Do not update one independently without an explicit compatibility decision.
 
-## Render Web Services & Docker
+## Update and Deploy Behavior
 
-- THERE IS LITERALLY NO SUCH THING AS FUCKING CMD ARGS IN RENDER
-- THERE IS DOCKERFILE PATH, DOCKER BUILD CONTEXT DIRECTORY, DOCKER COMMAND, PRE-DEPLOY COMMAND, AND THAT'S FUCKING IT
+### Web Service
 
-## Notes
-- The n8n worker needs to receive `worker --concurrency=10` arguments somehow. Without dockerCommand, it would just start as a regular n8n instance, not a worker.
-- The Render background worker has a Docker command field filled; it has changed many times
-- The Render background worker repo has no Dockerfile; it simply references the Dockerfile in this `n8n-render` repo
-- n8n background worker service on Render fails at runtime with /usr/bin/env: 'node': No such file or directory despite successful Docker builds.
-- n8n 2.1.0+ removed apk-tools from their Alpine image. The community workaround to reinstall apk-tools works for BUILD but fails at RUNTIME on Render specifically.
-- The web service works because it has no dockerCommand - it uses the image's default ENTRYPOINT which properly sets up the environment.
+- `.github/dependabot.yml` checks the Docker base image monthly.
+- The current configuration ignores normal minor and patch version updates and surfaces major updates only.
+- `.github/workflows/auto-merge.yml` requests automatic merging for Dependabot pull requests. Required checks and branch protection still control whether GitHub merges them.
+- Render’s Git-backed web service is configured to deploy after a merged commit reaches `main`.
 
-## Editing the n8n Background Worker's Docker Command in Render
+This is the configured monthly check and auto-merge path for the web service. The latest observed Dependabot pull request and auto-merge run were on 2025-12-24; no 2026 run was found in the 2026-08-22 audit. Confirm actual Dependabot runs and resulting Render deploys instead of assuming the schedule has executed.
 
-The command structure is:
+### Background Worker
 
-```bash
-curl --request PATCH \
-     --url "https://api.render.com/v1/services/${RENDER_SERVICE_ID}" \
-     --header "accept: application/json" \
-     --header "content-type: application/json" \
-     --header "authorization: Bearer ${RENDER_API_KEY}" \
-     --data '{"serviceDetails": {"envSpecificDetails": {"dockerCommand": "YOUR_NEW_COMMAND"}}}'
-```
+- The worker currently uses `docker.io/n8nio/n8n:latest`.
+- Render’s image-backed services do not automatically redeploy when a registry tag changes. The worker requires a manual deploy, deploy hook, or API trigger to pull a newer image.
+- The Render API may show `autoDeploy: yes` and `autoDeployTrigger: commit` for the worker. Because the worker has no linked repository and uses a prebuilt image, those fields are not a Docker Hub tag watcher.
+- No local GitHub Action, LaunchAgent, or n8n workflow referencing the worker service ID or deploy hook was found during the 2026-08-22 inspection.
 
-If you want to clear the command (set it to empty), you send:
+GitHub reported automated security fixes enabled and no open Dependabot alerts during the 2026-08-22 audit.
 
-```json
-"dockerCommand": ""
-```
+## Required Inspection
 
-## Checking the Environment Variables on Render
+Before deciding that any local file describes the current deployment:
 
-- Render's CLI only allows you to view environment variables for a project (i.e. a collection of services)
-- To view the environment variables for an individual service, you must use cURL with the API
+- Run the service inspection command in `docs/render_operations.md`.
+- Run the deploy-history commands for both n8n services.
+- Record the current WITA timestamp, latest deploy IDs, worker image digest, and relevant `updatedAt` values.
+- Compare the local repository with GitHub `main` using `git status`, `git rev-parse`, and `git ls-remote`.
+- Check `https://n8n-naps.onrender.com/healthz` and recent logs when validating a live deployment.
 
-```bash
-source .env && curl --request GET \
-     --url "https://api.render.com/v1/services/srv-d117ruqdbo4c739o7bhg/env-vars?limit=50" \
-     --header "accept: application/json" \
-     --header "authorization: Bearer ${RENDER_API_KEY}"
-```
+Treat the snapshot as stale if any live resource, deploy, image digest, GitHub workflow, or repository configuration changed after its timestamp. Refresh the snapshot instead of guessing.
 
-## Rules of Engagement
-- Never ask the user to push code, make a commit, check GitHub, check Render, deploy on Render, inspect Render logs, etc; you MUST do this yourself in 100% of instances with CLI or API cURL
-- Never ask for details like service IDs, deploy IDs, etc. Look these up on your own.
-- Use the Exa tool to search for context regarding code, build issues, packages, etc.
+Do not save or publish environment variables, API responses containing secrets, deploy-hook URLs, or credential values.
 
-## n8n Background Worker Configuration
-- You can see the sole meaningful file in this repo by using `cat ~/GitHub/n8n-background-worker/render.yaml`
-- The background worker is primarily configured in Render's web app admin, not the GitHub repo
+## Deployment Safety
 
-## Render CLI
+- Do not use n8n’s one-line installer or Docker Compose for this Render-hosted setup.
+- Do not apply a historical Blueprint to the existing project.
+- Do not recreate services, change plans, replace disks, or alter environment values merely to make a historical Blueprint validate.
+- Do not trigger a Render deployment or restart without explicit authorization for that live operation.
+- Before an approved update, inspect the live state and record a fresh timestamp.
+- After every approved Render deployment or Render configuration change, update `FAILURE_LOG.md` with the deploy ID, trigger, result, image digest when applicable, and local WITA timestamp.
+- After changing this repository’s deployment-related code or configuration, update `FAILURE_LOG.md`.
 
-The Render CLI is installed. Use `render --help` for details.
+## Repository Map
 
-You will find these in `.env` if you `source`:
-- `RENDER_API_KEY`
-- `RENDER_SERVICE_ID`
-- `RENDER_OWNER_ID`
+- `Dockerfile`: base image declaration used by the main web service.
+- `.github/dependabot.yml`: monthly Docker image update schedule and version-update policy.
+- `.github/workflows/auto-merge.yml`: Dependabot pull-request auto-merge workflow.
+- `docs/render_operations.md`: canonical live-state snapshot and inspection procedure.
+- `render.yaml`: historical web-and-database Blueprint; do not apply.
+- `render_queue_mode.yaml`: historical queue-mode Blueprint draft; do not apply.
+- `FAILURE_LOG.md`: operational history and reconciliation record.
 
-## GitHub Details
+## Historical Incident Notes
 
-The n8n worker is at:
-`chriswinsatlife/n8n-background-worker`
+The repository contains historical notes about failed attempts to add packages to the n8n image and to convert the worker from image runtime to Docker runtime. Those notes are not the current deployment configuration. Do not treat historical workaround text as a reason to change the live service.
 
-The only file of note for the background worker is:
-- `render.yaml`
+## Official References
 
-This repository is the `n8n-render` repository.
-
-The n8n web service is at:
-`chriswinsatlife/n8n-render`
-
-Key files are:
-- `Dockerfile`
-- `render.yaml`
-- `.github/workflows/auto-merge.yml`
-- `render_queue_mode.yaml`
-
-The worker is the primary service running the application and workflows; the web service is just the front-end.
-
-## Render Service IDs
-
-Use the below service IDs to inspect the Render deployments, services, logs, etc.
-
-### n8n Worker Render ID
-srv-d117ruqdbo4c739o7bhg
-
-### n8n Web Service Render ID
-srv-cmr5odgl5elc73ahtm40
-
-### n8n Redis Render ID
-red-d1012l3ipnbc738dbk70
-
-### n8n DB Render ID
-dpg-cjgkpc41ja0c73a8g8s0-a
-
-
-## API Details
-
-### Context
-
-The Render API supports almost all of the same functionality available in the Render Dashboard. It includes endpoints for managing:
-* Services and datastores
-* Deploys
-* Environment groups
-* Blueprints
-* Metrics and logs
-* Projects and environments
-* Custom domains
-* One-off jobs
-* Audit logs
-* Additional account settings
-
-The full API reference is available at [https://api-docs.render.com/reference/].
-
-## Example Render API calls
-
-### List Render Services
-
-```bash
-curl --request GET \
-     --url "https://api.render.com/v1/services?limit=10" \
-     --header "Accept: application/json" \
-     --header "Authorization: Bearer ${RENDER_API_KEY}"
-```
-
-### Get Logs for n8n Worker Service
-
-```bash
-curl --request GET \
-     --url "https://api.render.com/v1/logs?ownerId=${RENDER_OWNER_ID}&direction=backward&resource=srv-d117ruqdbo4c739o7bhg&limit=20" \
-     --header "accept: application/json" \
-     --header "authorization: Bearer ${RENDER_API_KEY}"
-```
-
-### Get Logs for n8n Main Service
-
-```bash
-curl --request GET \
-     --url "https://api.render.com/v1/logs?ownerId=${RENDER_OWNER_ID}&direction=backward&resource=srv-cmr5odgl5elc73ahtm40&limit=20" \
-     --header "accept: application/json" \
-     --header "authorization: Bearer ${RENDER_API_KEY}"
-```
-
-### Get Logs for n8n Redis Service
-
-```bash
-curl --request GET \
-     --url "https://api.render.com/v1/logs?ownerId=${RENDER_OWNER_ID}&direction=backward&resource=red-d1012l3ipnbc738dbk70&limit=20" \
-     --header "accept: application/json" \
-     --header "authorization: Bearer ${RENDER_API_KEY}"
-```
-
-## YOU MUST UPDATE `FAILURE_LOG.md` AFTER EVERY SINGLE CHANGE TO ANY CODE FILE IN THE REPO, EVERY SINGLE RENDER DEPLOYMENT, EVERY SINGLE CHANGE TO RENDER CONFIGURATION E.G. DOCKER COMMAND, ETC. NO EXCEPTIONS.
+- [Render image deployment](https://render.com/docs/deploying-an-image)
+- [Render deploys](https://render.com/docs/deploys)
+- [Render deploy hooks](https://render.com/docs/deploy-hooks)
+- [n8n queue mode](https://docs.n8n.io/deploy/host-n8n/configure-n8n/scaling/enable-queue-mode)

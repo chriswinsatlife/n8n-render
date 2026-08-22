@@ -1,4 +1,7 @@
-# FINAL CORRECTED render.yaml - v6 (Simplified and based on platform errors)
+# NON-AUTHORITATIVE HISTORICAL QUEUE-MODE DRAFT.
+# DO NOT APPLY TO THE EXISTING CYHQ N8N PROJECT.
+# It does not match the live grandfathered Render resources. The live Render
+# dashboard/API is the source of truth for plans, services, disks, and IDs.
 
 # This defines all services and their connections in one blueprint
 services:

@@ -1,5 +1,7 @@
 # n8n Background Worker on Render - Failure Log
 
+> Historical record only. Commands and service-recreation procedures in old entries are not an approved runbook. Do not execute them without a separate, explicit deployment decision and a fresh live-state inspection. Use `docs/render_operations.md` for the current operating procedure.
+
 ## Service
 - **Worker Service ID:** srv-d117ruqdbo4c739o7bhg
 - **Dashboard:** https://dashboard.render.com/worker/srv-d117ruqdbo4c739o7bhg/settings
@@ -83,20 +85,22 @@
 
 ## Root Cause Analysis (2025-12-26 Research Session)
 
-### CRITICAL DISCOVERY: Render's `dockerCommand` Completely Overrides BOTH ENTRYPOINT and CMD
+### Retired Runtime Hypothesis About Render `dockerCommand`
 
-**Source:** Render community posts and official documentation confirm:
+The following was a 2025-12-26 runtime hypothesis from failed custom-image experiments. It is not a general statement about current Render behavior and must not override the live service inspection or current Render documentation.
+
+**Historical sources consulted at the time:**
 - https://community.render.com/t/docker-entrypoint-executable-not-running/1425
 - https://community.render.com/t/commands-in-docker-compose-yml/16442
 - https://render.com/docs/docker
 
-**The Problem:**
+**Historical interpretation:**
 1. When you set a `dockerCommand` in Render, it uses Docker's `--entrypoint` flag internally
 2. This **completely replaces** BOTH the Dockerfile's `ENTRYPOINT` AND `CMD`
 3. The container launches with **minimal environment** - no shell setup, no PATH from profile scripts
 4. Our `ENTRYPOINT ["/worker-entrypoint.sh"]` is **never executed** because Render bypasses it
 
-**Why We See `/usr/bin/env: 'node': No such file or directory`:**
+**Historical failure interpretation:**
 1. The `dockerCommand` value `/usr/local/bin/node ...` tries to execute the n8n binary directly
 2. But the n8n binary at `/usr/local/lib/node_modules/n8n/bin/n8n` has shebang `#!/usr/bin/env node`
 3. When Render starts the container with `dockerCommand`, PATH is minimal (no `/usr/local/bin`)
@@ -247,8 +251,8 @@ The dockerCommand `/usr/local/bin/node /usr/local/lib/node_modules/n8n/bin/n8n w
 
 ### WITH OFFICIAL IMAGE (runtime: image) - SUCCESS!
 8. `worker --concurrency=10` - **SUCCESS!**
-   - When using `runtime: image` with official n8n image, dockerCommand is passed as ARGUMENTS to ENTRYPOINT
-   - This is different from `runtime: docker` where dockerCommand REPLACES ENTRYPOINT
+   - This was the observed behavior for the official image-backed worker in this historical deploy.
+   - Do not generalize this entrypoint behavior to every Render runtime. Check the current Render service and official Render documentation.
 
 ---
 
@@ -259,7 +263,7 @@ The worker is running with the official n8n image, which lacks custom packages:
 - python3, yt-dlp, mobi
 
 ### Dockerfile Ready
-A Dockerfile with these packages exists at `/Dockerfile`:
+A historical Dockerfile with these packages was prepared at the repository root as `Dockerfile`:
 - Base: `n8nio/n8n:latest`
 - Includes apk-tools workaround
 - Has `CMD ["worker", "--concurrency=10"]` baked in
@@ -270,20 +274,9 @@ A Dockerfile with these packages exists at `/Dockerfile`:
 2. **Docker Hub push timed out** - The ~480MB packages layer kept failing to upload
 3. **ghcr.io token lacks scope** - Would need `write:packages` permission
 
-### To Deploy Custom Image
-**Option A: Push to Docker Hub (retry when network is better)**
-```bash
-docker build -t chriswinsatlife/n8n-custom:latest .
-docker push chriswinsatlife/n8n-custom:latest
-# Then update imagePath via API
-```
+### Historical Custom Image Procedure Retired
 
-**Option B: Recreate worker service**
-1. Delete current worker service
-2. Create new one with `runtime: docker`
-3. Connect to repo `chriswinsatlife/n8n-render`
-4. Leave Docker Command empty (CMD in Dockerfile)
-5. Re-add all env vars and disk mount
+This section is archived and intentionally contains no executable deployment procedure. Do not push a custom image, delete the current worker, recreate the service, or re-add environment values based on this historical experiment. The live worker is the existing image-backed service documented in `docs/render_operations.md`.
 
 ---
 
@@ -291,3 +284,34 @@ docker push chriswinsatlife/n8n-custom:latest
 - GitHub Issue: https://github.com/n8n-io/n8n/issues/23246
 - Community Thread: https://community.n8n.io/t/docker-image-is-distroless-cannot-install-git-gh-cli-need-extensible-variant/240490
 - Render Support Message: render_support_message.md
+
+## Documentation and Configuration Reconciliation 2026-08-22
+
+- Updated `README.md` to describe the verified live Render architecture and the separate web-service and worker update paths.
+- Aligned `.github/dependabot.yml` with the deployed monthly, major-version-only Docker update policy.
+- Marked `render.yaml` and `render_queue_mode.yaml` as historical, non-authoritative files that must not be applied to the existing grandfathered Render project.
+- No Render deployment, restart, plan change, resource recreation, or external update was performed.
+- The live worker remains the existing image-backed service using `docker.io/n8nio/n8n:latest`; changing that service remains a separate deployment decision.
+
+## Operations Documentation Refresh 2026-08-22
+
+- Added `docs/render_operations.md` with a timestamped live Render snapshot, authority order, read-only inspection commands, update paths, deployment rules, and official references.
+- Rewrote `AGENTS.md` to distinguish the monthly GitHub-to-Render web-service path from the separately deployed image-backed worker path.
+- Added the operations document link and the web-versus-worker automation distinction to `README.md`.
+- Verified the live snapshot at 2026-08-22 10:47:57 WITA. No Render deployment, restart, plan change, resource recreation, or external update was performed.
+
+## Documentation Audit Corrections 2026-08-22
+
+- Clarified that the web Dependabot path is configured for monthly checks and auto-merge, but the specific 2026-08-10 web deploy is not attributed to Dependabot by the available evidence.
+- Added an explicit historical-only warning to this failure log and retired the old custom-image push and worker-recreation procedure.
+- Reframed the old `dockerCommand` entrypoint conclusion as a runtime-specific historical hypothesis.
+- Corrected the historical custom Dockerfile reference to the repository-relative `Dockerfile` path.
+- Verified at 2026-08-22 11:01:13 WITA. No Render deployment, restart, plan change, resource recreation, or external update was performed.
+
+## Automation Audit 2026-08-22
+
+- Confirmed the GitHub configuration: Dependabot checks monthly, ignores minor and patch version updates, and the auto-merge workflow is present.
+- The latest observed Dependabot pull request and auto-merge workflow run were on 2025-12-24 for n8n 2.1.4. No 2026 Dependabot pull request or auto-merge run was found.
+- GitHub reported automated security fixes enabled and no open Dependabot alerts at 2026-08-22 11:10:36 WITA.
+- The 2026-08-10 Render web deploy was triggered by a new commit containing the Dependabot-throttling configuration, not by an n8n version update.
+- No repository automation or Render worker deploy was changed. No Render deployment, restart, plan change, resource recreation, or external update was performed.
