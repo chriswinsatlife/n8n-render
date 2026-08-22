@@ -330,3 +330,4 @@ This section is archived and intentionally contains no executable deployment pro
 - Render Blueprint `n8n-new` reported a sync failure because the historical `render.yaml` declared the legacy Postgres `starter` plan, which Render no longer permits for new Blueprint databases.
 - Replaced the historical resource definitions with empty `services` and `databases` lists. This prevents stale Blueprint configuration from being applied and does not alter the live CYHQ n8n resources.
 - Local Render CLI validation passed for the replacement placeholder. The repository must be published so the linked Blueprint can re-read the valid file.
+- The duplicate zero-resource Blueprint `n8n-new` (`exs-cmr5n1n109ks73fg75k0`) was disconnected at 2026-08-22 11:26:58 WITA. Render returned HTTP 204, and no services or datastores were deleted.

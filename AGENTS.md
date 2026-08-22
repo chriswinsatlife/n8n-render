@@ -28,6 +28,7 @@ The main service and worker are one queue-mode system. They must continue to sha
 - The current configuration checks monthly and allows minor and patch version updates to be proposed.
 - `.github/workflows/auto-merge.yml` requests automatic merging for Dependabot pull requests. Required checks and branch protection still control whether GitHub merges them.
 - Render’s Git-backed web service is configured to deploy after a merged commit reaches `main`.
+- The duplicate Render Blueprint `n8n-new` was disconnected on 2026-08-22 because it had zero managed resources and was syncing the stale historical Blueprint file.
 
 This is the configured monthly check and auto-merge path for the web service. The latest observed Dependabot pull request and auto-merge run were on 2025-12-24; no 2026 run was found in the 2026-08-22 audit. Confirm actual Dependabot runs and resulting Render deploys instead of assuming the schedule has executed.
 

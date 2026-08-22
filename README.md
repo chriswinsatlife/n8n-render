@@ -18,6 +18,8 @@ For the timestamped live configuration, authority rules, read-only Render CLI co
 
 The Render dashboard and API are the source of truth for service type, plan, resource IDs, environment values, disks, and the worker image. Do not recreate these resources from an old Blueprint.
 
+No active Render Blueprint is connected to this repository. The duplicate `n8n-new` Blueprint was disconnected after its zero-resource sync began failing on the obsolete historical Postgres plan.
+
 ## Update Paths
 
 The web service follows this path:

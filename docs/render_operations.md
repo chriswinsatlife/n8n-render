@@ -1,6 +1,6 @@
 # Render Operations
 
-Last verified: 2026-08-22 11:24:00 WITA
+Last verified: 2026-08-22 11:26:58 WITA
 
 This document records the live Render configuration and the commands used to verify it. The live Render service snapshot was collected at 2026-08-22 10:47:57 WITA. The GitHub automation audit was completed at 2026-08-22 11:10:36 WITA. Treat this document as stale when a Render service, deploy, image, GitHub workflow, or repository configuration changes after the timestamp.
 
@@ -101,6 +101,12 @@ GitHub reports automated security fixes enabled and no open Dependabot alerts at
 - The worker remains on the image digest from its last successful deploy until another deploy is triggered.
 - A Render Dashboard manual deploy, Render CLI deploy, deploy hook, or Render API trigger can pull the current tag or a specified tag/digest.
 - Do not update the worker independently from the main service. Queue mode uses the main process, worker, Redis, database, and shared encryption key as one system.
+
+### Disconnected Duplicate Blueprint
+
+- Blueprint `n8n-new`, ID `exs-cmr5n1n109ks73fg75k0`, was connected to this repository with automatic sync enabled and zero managed resources.
+- It was disconnected on 2026-08-22 after its sync failed on the obsolete historical Postgres `starter` plan. Disconnecting it stops automatic syncing without deleting resources.
+- No active Render Blueprint remains connected to this repository.
 
 ### Manual and Emergency Path
 
