@@ -315,3 +315,18 @@ This section is archived and intentionally contains no executable deployment pro
 - GitHub reported automated security fixes enabled and no open Dependabot alerts at 2026-08-22 11:10:36 WITA.
 - The 2026-08-10 Render web deploy was triggered by a new commit containing the Dependabot-throttling configuration, not by an n8n version update.
 - No repository automation or Render worker deploy was changed. No Render deployment, restart, plan change, resource recreation, or external update was performed.
+
+## Coordinated n8n Update 2026-08-22
+
+- Pinned the web-service Dockerfile and worker image to n8n `2.35.7`, the latest non-preview release verified during this update.
+- Published repository commit `50ef3d7db69193bdeab5cfdefa6ee99ca2125243` to GitHub `main`.
+- Web deploy `dep-da4h9t5ckfvc73ciu1e0` completed live at 2026-08-22 11:18:33 WITA. The image build resolved the n8n base image index `sha256:166d7e3ca384afdffe75394bf00046c299d84a4bf17b19b35d6cf7773af0a147`.
+- Worker image reference changed from `docker.io/n8nio/n8n:latest` to `docker.io/n8nio/n8n:2.35.7`. Worker deploy `dep-da4hbl8n74is73dl14hg` completed live at 2026-08-22 11:21:59 WITA with image digest `sha256:f410270e715c795b4935eb16f94c099f7aee8da81c340c9842e76f0d5e716ff3`.
+- Existing standard service plans, persistent disks, database, Redis, commands, and environment values were preserved.
+- Public health returned `{"status":"ok"}` after the web deployment, and recent worker logs show successful workflow executions after the worker deployment.
+
+## Blueprint Validation Repair 2026-08-22
+
+- Render Blueprint `n8n-new` reported a sync failure because the historical `render.yaml` declared the legacy Postgres `starter` plan, which Render no longer permits for new Blueprint databases.
+- Replaced the historical resource definitions with empty `services` and `databases` lists. This prevents stale Blueprint configuration from being applied and does not alter the live CYHQ n8n resources.
+- Local Render CLI validation passed for the replacement placeholder. The repository must be published so the linked Blueprint can re-read the valid file.

@@ -1,6 +1,6 @@
 # Render Operations
 
-Last verified: 2026-08-22 11:10:36 WITA
+Last verified: 2026-08-22 11:24:00 WITA
 
 This document records the live Render configuration and the commands used to verify it. The live Render service snapshot was collected at 2026-08-22 10:47:57 WITA. The GitHub automation audit was completed at 2026-08-22 11:10:36 WITA. Treat this document as stale when a Render service, deploy, image, GitHub workflow, or repository configuration changes after the timestamp.
 
@@ -9,7 +9,8 @@ This document records the live Render configuration and the commands used to ver
 - Live Render API and Dashboard are authoritative for service type, plans, resource IDs, environment values, disks, commands, image references, and deployed image digests.
 - GitHub `main` is authoritative for the web service Dockerfile and GitHub Actions workflows.
 - This document and `AGENTS.md` explain how to inspect the live state. They are not a replacement for a live Render inspection.
-- `render.yaml` and `render_queue_mode.yaml` in this repository are historical, non-authoritative Blueprints. Do not apply them to the existing project.
+- `render.yaml` is an empty historical, non-authoritative Blueprint placeholder. Do not apply it to the existing project.
+- `render_queue_mode.yaml` is a historical, non-authoritative queue-mode draft. Do not apply it to the existing project.
 - `~/github/n8n-background-worker/render.yaml` is also a historical Render export. It describes three Docker workers, while the live project has one image-backed worker.
 
 ## Live Render Project
@@ -38,9 +39,9 @@ This document records the live Render configuration and the commands used to ver
 - Persistent disk: 5 GB at `/home/node`
 - Public Render URL: `https://n8n-naps.onrender.com`
 - Render auto-deploy setting: commit
-- Last observed live deploy: `dep-d9sr5u6q1p3s73803or0`, new commit, 2026-08-10 19:17:07 WITA
+- Last observed live deploy: `dep-da4h9t5ckfvc73ciu1e0`, new commit, 2026-08-22 11:18:33 WITA
 
-The current repository Dockerfile contains `FROM n8nio/n8n:latest`. A GitHub commit is required before this Git-backed Render service rebuilds and deploys.
+The current repository Dockerfile contains `FROM n8nio/n8n:2.35.7`. A GitHub commit is required before this Git-backed Render service rebuilds and deploys.
 
 ### Background Worker
 
@@ -49,12 +50,13 @@ The current repository Dockerfile contains `FROM n8nio/n8n:latest`. A GitHub com
 - Type: background worker
 - Plan: standard
 - Runtime: prebuilt image
-- Image reference: `docker.io/n8nio/n8n:latest`
+- Image reference: `docker.io/n8nio/n8n:2.35.7`
 - Command: `n8n worker --concurrency=10`
 - Instances: 1
 - Persistent disk: 5 GB at `/home/node/.n8n`
 - Render API auto-deploy field: commit
-- Last observed live deploy: `dep-d6kh4h5m5p6s73dqoqb0`, deploy hook, 2026-03-05 13:20:26 WITA
+- Last observed live deploy: `dep-da4hbl8n74is73dl14hg`, API, 2026-08-22 11:21:59 WITA
+- Last observed image digest: `sha256:f410270e715c795b4935eb16f94c099f7aee8da81c340c9842e76f0d5e716ff3`
 - Last observed image digest: `sha256:00220887605660bbd1aa79ff63b4761759d875fc27bcf013dc754bc3b7f6215c`
 
 The worker has no linked Git repository. Render documents that image-backed services do not automatically redeploy when a registry tag such as `latest` changes. A manual deploy, deploy hook, or API trigger is required to pull a newer image. The `autoDeploy` and `autoDeployTrigger` fields must not be interpreted as a Docker Hub tag watcher.
@@ -86,7 +88,7 @@ No local GitHub Action, LaunchAgent, or n8n workflow referencing this worker’s
 ### Web Service Path
 
 - Dependabot checks the Docker base image monthly, according to `.github/dependabot.yml`.
-- The current Dependabot configuration ignores normal minor and patch version updates and surfaces major version updates only.
+- The current Dependabot configuration checks monthly and allows minor and patch version updates.
 - `.github/workflows/auto-merge.yml` asks GitHub to auto-merge Dependabot pull requests. GitHub still applies required checks and branch protection rules.
 - After a merged commit reaches `main`, Render’s Git-backed web service is configured to auto-deploy that commit.
 

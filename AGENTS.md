@@ -7,7 +7,8 @@ Read `FAILURE_LOG.md` and `docs/render_operations.md` before inspecting or chang
 - Live Render API and Dashboard are authoritative for service type, plans, resource IDs, environment values, disks, commands, image references, and deployed image digests.
 - GitHub `main` is authoritative for the web service Dockerfile and GitHub Actions workflows.
 - Local documentation is explanatory and becomes stale after a live deployment, Render configuration change, GitHub workflow change, or image update.
-- `render.yaml` and `render_queue_mode.yaml` in this repository are historical, non-authoritative Blueprints. Never apply them to the existing grandfathered project.
+- `render.yaml` is an empty, historical, non-authoritative Blueprint placeholder. Never apply it to the existing grandfathered project.
+- `render_queue_mode.yaml` is a historical, non-authoritative queue-mode draft. Never apply it to the existing grandfathered project.
 - `~/github/n8n-background-worker/render.yaml` is a historical export describing three Docker workers. The live project has one image-backed worker.
 
 ## Live Service Roles
@@ -24,7 +25,7 @@ The main service and worker are one queue-mode system. They must continue to sha
 ### Web Service
 
 - `.github/dependabot.yml` checks the Docker base image monthly.
-- The current configuration ignores normal minor and patch version updates and surfaces major updates only.
+- The current configuration checks monthly and allows minor and patch version updates to be proposed.
 - `.github/workflows/auto-merge.yml` requests automatic merging for Dependabot pull requests. Required checks and branch protection still control whether GitHub merges them.
 - Render’s Git-backed web service is configured to deploy after a merged commit reaches `main`.
 
@@ -32,7 +33,7 @@ This is the configured monthly check and auto-merge path for the web service. Th
 
 ### Background Worker
 
-- The worker currently uses `docker.io/n8nio/n8n:latest`.
+- The worker currently uses `docker.io/n8nio/n8n:2.35.7`.
 - Render’s image-backed services do not automatically redeploy when a registry tag changes. The worker requires a manual deploy, deploy hook, or API trigger to pull a newer image.
 - The Render API may show `autoDeploy: yes` and `autoDeployTrigger: commit` for the worker. Because the worker has no linked repository and uses a prebuilt image, those fields are not a Docker Hub tag watcher.
 - No local GitHub Action, LaunchAgent, or n8n workflow referencing the worker service ID or deploy hook was found during the 2026-08-22 inspection.
@@ -69,7 +70,7 @@ Do not save or publish environment variables, API responses containing secrets, 
 - `.github/dependabot.yml`: monthly Docker image update schedule and version-update policy.
 - `.github/workflows/auto-merge.yml`: Dependabot pull-request auto-merge workflow.
 - `docs/render_operations.md`: canonical live-state snapshot and inspection procedure.
-- `render.yaml`: historical web-and-database Blueprint; do not apply.
+- `render.yaml`: empty historical Blueprint placeholder; do not apply.
 - `render_queue_mode.yaml`: historical queue-mode Blueprint draft; do not apply.
 - `FAILURE_LOG.md`: operational history and reconciliation record.
 

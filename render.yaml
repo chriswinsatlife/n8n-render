@@ -1,44 +1,8 @@
-# NON-AUTHORITATIVE HISTORICAL BLUEPRINT.
+# NON-AUTHORITATIVE HISTORICAL BLUEPRINT PLACEHOLDER.
 # DO NOT APPLY TO THE EXISTING CYHQ N8N PROJECT.
-# It does not match the live grandfathered Render resources. The live Render
-# dashboard/API is the source of truth for plans, services, disks, and IDs.
+# The old resource definitions were removed because they described stale
+# Render resources and a legacy Postgres plan that cannot be used for new
+# Blueprint databases. The live Render dashboard/API remains authoritative.
 
-services:
-  - type: web
-    name: n8n
-    env: docker
-    region: oregon # optional (defaults to oregon)
-    plan: standard # optional (defaults to starter)
-    branch: main # optional (defaults to master)
-    # dockerCommand: ./webdis.sh # optional (defaults to Dockerfile command)
-    numInstances: 1
-    healthCheckPath: /
-    envVars:
-      - key: PGHOST
-        fromDatabase:
-          name: n8n-database
-          property: host
-      - key: PGDATABASE
-        fromDatabase:
-          name: n8n-database
-          property: database
-      - key: PGPORT
-        fromDatabase:
-          name: n8n-database
-          property: port
-      - key: PGUSER
-        fromDatabase:
-          name: n8n-database
-          property: user
-      - key: PGPASSWORD
-        fromDatabase:
-          name: n8n-database
-          property: password
-    disk:
-      name: n8nDisk
-      mountPath: /home/node/.n8n
-      sizeGB: 10
-
-databases:
-  - name: n8n-database
-    plan: starter
+services: []
+databases: []

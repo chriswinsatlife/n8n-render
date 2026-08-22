@@ -14,7 +14,7 @@ For the timestamped live configuration, authority rules, read-only Render CLI co
 - Redis: `n8n-redis`, Render service `red-d1012l3ipnbc738dbk70`
 - Both n8n services use the standard plan. The database and Redis retain their existing plans.
 - The web service builds from this GitHub repository with `Dockerfile`.
-- The worker is an image-backed Render service using `docker.io/n8nio/n8n:latest` and `n8n worker --concurrency=10`.
+- The worker is an image-backed Render service using `docker.io/n8nio/n8n:2.35.7` and `n8n worker --concurrency=10`.
 
 The Render dashboard and API are the source of truth for service type, plan, resource IDs, environment values, disks, and the worker image. Do not recreate these resources from an old Blueprint.
 
@@ -22,8 +22,8 @@ The Render dashboard and API are the source of truth for service type, plan, res
 
 The web service follows this path:
 
-- Dependabot checks the `n8nio/n8n:latest` Docker base image monthly.
-- Dependabot is configured to propose major-version updates only.
+- Dependabot checks the pinned `n8nio/n8n:2.35.7` Docker base image monthly.
+- Dependabot can propose minor and patch updates.
 - The repository workflow enables automatic merging for Dependabot pull requests.
 - Render automatically deploys the web service after the merged GitHub commit.
 
@@ -38,7 +38,7 @@ Before any worker update, record the currently running image digest, confirm tha
 - `Dockerfile` is the web service’s current base-image declaration.
 - `.github/dependabot.yml` controls the web-service image update cadence.
 - `.github/workflows/auto-merge.yml` handles Dependabot pull requests.
-- `render.yaml` is a historical web-and-database Blueprint and must not be applied to the existing project.
+- `render.yaml` is an empty historical Blueprint placeholder and must not be applied to the existing project.
 - `render_queue_mode.yaml` is a historical queue-mode draft and must not be applied to the existing project.
 - `FAILURE_LOG.md` records operational history and must be updated when this repository’s deployment configuration is edited.
 
