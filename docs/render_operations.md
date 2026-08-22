@@ -128,6 +128,14 @@ GitHub reports automated security fixes enabled and no open Dependabot alerts at
 - When they differ, it updates the worker image setting, triggers an explicit Render API deploy, and waits for the target image reference to be live.
 - A failed run leaves the services in their last state and is retried by the next weekly scheduled run. GitHub Actions runner availability or usage limits can still prevent a run; no paid Actions usage is authorized.
 
+### Future Render Cron Job Option
+
+- A future migration could replace the GitHub Actions coordinator with a Render Cron Job that performs the same worker-image reconciliation through the Render API.
+- Do not create that service yet. First preserve the current grandfathered web service, worker, database, Redis, plans, disks, commands, and environment values while the GitHub path proves reliable.
+- Any future cron job must use an explicit pinned n8n image or repository commit, wait for the web service to be live and healthy, reconcile the worker only when needed, and fail clearly when the services cannot be aligned.
+- Render Cron Jobs do not provide persistent disks and have their own service billing and single-run behavior. Re-check the current Render documentation and cost before creating one.
+- Do not restore or expand the historical Blueprint files to create this future service. ([Render Cron Jobs](https://render.com/docs/cronjobs))
+
 ## Read-Only Inspection
 
 Run these commands from any directory after Render CLI authentication. They do not deploy, restart, update, or delete anything.
